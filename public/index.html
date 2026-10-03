@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f1">
+  <meta name="description" content="Find, reserve, and manage EV charging across the ChargeOps network.">
+  <title>ChargeOps — your EV network</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.2 2.5 5.6 13h5.2l-.7 8.5L18.4 11h-5.2l.0-8.5Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="m5 11 1.7-5.2A2 2 0 0 1 8.6 4h6.8a2 2 0 0 1 1.9 1.8L19 11l1.5 1.4a2 2 0 0 1 .5 1.4V18h-2v2h-3v-2H8v2H5v-2H3v-4.2a2 2 0 0 1 .5-1.4L5 11Z"/><path d="M6 11h12M6.5 14.5h.1m10.8 0h.1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-energy" viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m6 14v-7m5 7V3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 4c-8 0-14 3-14 10a6 6 0 0 0 6 6c7 0 8-8 8-16Z"/><path d="M4 21c2-5 6-8 12-11"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="ChargeOps home">
+      <span class="brand-mark"><svg><use href="#i-bolt"/></svg></span>
+      <span class="brand-word">chargeops<span class="brand-dot">.</span><small>CHARGING NETWORK</small></span>
+    </a>
+    <nav id="mainNav" class="main-nav" aria-label="Main navigation">
+      <a class="nav-link active" href="#explore">Explore</a>
+      <a class="nav-link" href="#activity">My charging</a>
+      <a class="nav-link operational-link hidden" href="#operations">Operations</a>
+    </nav>
+    <div class="top-actions">
+      <a class="top-help" href="#how-it-works">How it works</a>
+      <span id="whoami" class="user-chip hidden"><span class="user-avatar" id="userAvatar">D</span><span id="userName"></span></span>
+      <button id="logout" class="button button-quiet hidden">Sign out</button>
+      <button id="mobileMenu" class="icon-button mobile-menu" aria-label="Open menu"><svg><use href="#i-menu"/></svg></button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section id="authPanel" class="auth-layout">
+      <div class="auth-story">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> THE ROAD, RECHARGED</div>
+        <h1>More miles.<br><em>Less waiting.</em></h1>
+        <p>One calm place to find a charger, book your time, and keep every charging session in view.</p>
+        <div class="story-foot">
+          <div class="story-avatars"><span>M</span><span>A</span><span>R</span><b>+</b></div>
+          <span>Built for the journeys<br>you take every day.</span>
+        </div>
+        <div class="auth-orbit" aria-hidden="true"><div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div><span class="orbit-core"><svg><use href="#i-bolt"/></svg></span><span class="orbit-spark spark-one"></span><span class="orbit-spark spark-two"></span><span class="orbit-spark spark-three"></span></div>
+      </div>
+      <div class="auth-card panel">
+        <div class="auth-card-head"><span class="eyebrow">WELCOME TO CHARGEOPS</span><h2>Your next charge<br>starts here.</h2></div>
+        <div class="segmented"><button class="segment active" data-auth-mode="login">Sign in</button><button class="segment" data-auth-mode="register">Create account</button></div>
+        <form id="authForm">
+          <label id="nameField" class="hidden">Your name<input name="displayName" autocomplete="name" placeholder="Maya Rao"></label>
+          <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+          <label>Password<input name="password" type="password" minlength="8" required autocomplete="current-password" placeholder="At least 8 characters"></label>
+          <button class="button button-primary full" type="submit" id="authSubmit">Sign in <svg><use href="#i-arrow"/></svg></button>
+          <p id="authMessage" class="form-message" aria-live="polite"></p>
+        </form>
+        <div class="auth-note"><span class="secure-icon">✓</span><span>Your account and charging history stay connected.</span></div>
+        <p class="fine-print">Student demo · synthetic network · simulated payments</p>
+      </div>
+    </section>
+
+    <section id="appPanel" class="hidden">
+      <section class="dashboard-hero reveal">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> YOUR CHARGING NETWORK</div>
+          <h1>Ready when<br><em>you are, <span id="welcomeName">driver</span>.</em></h1>
+          <p>Find your next stop, pick a port, and let the road take it from there.</p>
+          <a class="button button-lime" href="#explore">Find a charger <svg><use href="#i-arrow"/></svg></a>
+          <div class="hero-caption"><span class="live-pulse"></span> Charging network is online <span class="caption-divider">·</span><span id="serverTime"></span></div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="visual-grid"></div><div class="visual-orbit orbit-a"></div><div class="visual-orbit orbit-b"></div>
+          <div class="visual-sun"></div>
+          <div class="charger-tower"><div class="tower-screen"><svg><use href="#i-bolt"/></svg><span>READY</span></div><div class="tower-body"></div><div class="tower-foot"></div><div class="tower-cable"></div><div class="tower-plug"></div></div>
+          <div class="floating-tag tag-kwh"><span class="tag-icon"><svg><use href="#i-energy"/></svg></span><span><b>Clean energy</b><small>Flowing your way</small></span></div>
+          <div class="floating-tag tag-network"><span class="tag-pulse"></span><span><b>Network live</b><small>Ports updating now</small></span></div>
+          <div class="visual-label">CHARGE / GO / REPEAT</div>
+        </div>
+      </section>
+
+      <section class="stats-grid" aria-label="Charging overview">
+        <article class="stat-card reveal"><div class="stat-top"><span class="stat-icon icon-green"><svg><use href="#i-bolt"/></svg></span><span class="stat-kicker">YOUR ENERGY</span></div><strong id="statEnergy">—</strong><span class="stat-caption">kWh delivered</span><div class="stat-spark spark-energy"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+        <article class="stat-card reveal"><div class="stat-top"><span class="stat-icon icon-lime"><svg><use href="#i-car"/></svg></span><span class="stat-kicker">ON THE NETWORK</span></div><strong id="statSessions">—</strong><span class="stat-caption">completed sessions</span><div class="stat-bottom"><span class="mini-dot"></span> All sessions accounted for</div></article>
+        <article class="stat-card reveal"><div class="stat-top"><span class="stat-icon icon-peach">₹</span><span class="stat-kicker">CHARGING SPEND</span></div><strong id="statSpend">—</strong><span class="stat-caption">paid invoices</span><div class="stat-bottom"><span class="mini-dot"></span> Simulated payments</div></article>
+        <article class="stat-card stat-next reveal"><div class="stat-top"><span class="stat-icon icon-blue"><svg><use href="#i-clock"/></svg></span><span class="stat-kicker">UP NEXT</span></div><strong id="statNext">No booking</strong><span class="stat-caption" id="statNextDetail">Your next stop will show up here</span><a class="stat-link" href="#activity">View schedule <svg><use href="#i-arrow"/></svg></a></article>
+      </section>
+
+      <div id="explore" class="section-anchor"></div>
+      <section class="explore-layout">
+        <div class="explore-main panel reveal">
+          <div class="section-heading">
+            <div><span class="eyebrow">FIND YOUR NEXT STOP</span><h2>Chargers around you<span class="heading-period">.</span></h2><p>Choose a station and we’ll find a port that fits your EV.</p></div>
+            <span class="result-count" id="resultCount">NETWORK</span>
+          </div>
+          <form id="searchForm" class="search-form">
+            <label class="search-field"><span>City</span><span class="input-shell"><svg><use href="#i-pin"/></svg><input name="city" placeholder="Search a city" value="Pune"></span></label>
+            <label class="search-field"><span>Connector</span><span class="input-shell"><svg><use href="#i-bolt"/></svg><select name="connector"><option value="">Any connector</option></select></span></label>
+            <label class="search-field"><span>Arrive from</span><span class="input-shell"><svg><use href="#i-clock"/></svg><input name="from" type="datetime-local"></span></label>
+            <label class="search-field"><span>Until</span><span class="input-shell"><svg><use href="#i-clock"/></svg><input name="to" type="datetime-local"></span></label>
+            <button class="button button-primary search-submit" type="submit"><svg><use href="#i-search"/></svg> Search stations</button>
+          </form>
+          <div class="quick-filters"><span>POPULAR:</span><button type="button" data-filter-connector="CCS2">CCS2 fast charge</button><button type="button" data-filter-connector="Type2">Type 2</button><button type="button" data-filter-city="Mumbai">Mumbai</button></div>
+          <div id="stationResults" class="station-results"><div class="empty-state">Loading stations from the network…</div></div>
+          <button id="showMoreStations" class="show-more hidden" type="button">Show all stations <span>↓</span></button>
+        </div>
+
+        <aside class="explore-side">
+          <section class="map-card panel reveal">
+            <div class="map-head"><span class="eyebrow">NETWORK MAP</span><span class="map-live"><i></i> LIVE</span></div>
+            <div id="networkMap" class="network-map" aria-label="Schematic map of stations">
+              <svg class="map-lines" viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden="true"><path d="M32 199 112 147 174 174 236 92 309 117 371 48"/><path d="M112 147 136 54 236 92 274 214 371 48"/><path d="M32 199 96 224 174 174 274 214"/></svg>
+              <div class="map-label label-north">NORTH LOOP</div><div class="map-label label-east">EAST LINK</div><div class="map-label label-south">SOUTH ROUTE</div>
+              <div id="mapPins" class="map-pins"></div><div class="map-compass">N <span>↑</span></div>
+            </div>
+            <div class="map-legend"><span><i class="legend-dot available"></i>Ports available</span><span><i class="legend-dot busy"></i>Busy / offline</span></div>
+          </section>
+          <section class="tip-card reveal" id="how-it-works">
+            <div class="tip-orb"><svg><use href="#i-leaf"/></svg></div><div><span class="eyebrow">A BETTER WAY TO PLUG IN</span><p>Your reservation, session readings, and invoice stay linked from start to finish.</p><a href="#activity">See your charging activity <svg><use href="#i-arrow"/></svg></a></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="lower-grid">
+        <section class="panel garage-panel reveal" id="garage">
+          <div class="section-heading"><div><span class="eyebrow">YOUR GARAGE</span><h2>Electric vehicles<span class="heading-period">.</span></h2><p>We’ll match your car to the right connector.</p></div><button id="toggleVehicleForm" class="button button-outline" type="button">＋ Add EV</button></div>
+          <div id="vehicleList" class="vehicle-list"></div>
+          <form id="vehicleForm" class="inline-form hidden">
+            <label>EV model<select name="modelId" required aria-label="Vehicle model"></select></label>
+            <label>Vehicle ID<input name="vin" required minlength="17" maxlength="17" placeholder="17-character VIN" aria-label="VIN"></label>
+            <label>Nickname<input name="nickname" placeholder="Optional name" aria-label="Nickname"></label>
+            <div class="form-actions"><button class="button button-quiet" type="button" id="cancelVehicle">Cancel</button><button class="button button-primary" type="submit">Add to garage <svg><use href="#i-arrow"/></svg></button></div>
+          </form>
+        </section>
+        <section id="analyticsPanel" class="panel insight-panel reveal">
+          <div class="section-heading"><div><span class="eyebrow">NETWORK PULSE</span><h2>Energy in motion<span class="heading-period">.</span></h2></div><span class="insight-icon"><svg><use href="#i-energy"/></svg></span></div>
+          <p>Station energy rankings show where the network is working hardest.</p>
+          <button id="loadRanking" class="text-button">Load station ranking <svg><use href="#i-arrow"/></svg></button>
+          <div id="rankingResults" class="ranking-results"><div class="ranking-placeholder"><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>10</span><small>Rankings load from live session records</small></div></div>
+        </section>
+      </section>
+
+      <section id="activity" class="panel activity-panel reveal">
+        <div class="section-heading activity-heading"><div><span class="eyebrow">YOUR ACTIVITY</span><h2>Bookings & sessions<span class="heading-period">.</span></h2><p>Your charging timeline, in one place.</p></div><button id="refreshBookings" class="icon-refresh" aria-label="Refresh activity">↻</button></div>
+        <div class="activity-toolbar"><div class="activity-tabs" role="tablist"><button class="activity-tab active" data-activity-filter="all">All activity</button><button class="activity-tab" data-activity-filter="upcoming">Upcoming</button><button class="activity-tab" data-activity-filter="history">History</button></div><span id="activityCount" class="activity-count"></span></div>
+        <div id="bookingResults" class="booking-list"><div class="empty-state">Loading your charging activity…</div></div>
+      </section>
+
+      <section id="operations" class="panel maintenance-panel hidden reveal">
+        <div class="section-heading"><div><span class="eyebrow">KEEPING THE NETWORK READY</span><h2>Maintenance queue<span class="heading-period">.</span></h2><p>Faults and repairs reported across your stations.</p></div><button id="refreshMaintenance" class="button button-outline">Refresh queue ↻</button></div>
+        <div id="maintenanceResults" class="booking-list"></div>
+      </section>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <dialog id="bookingDialog" class="app-dialog">
+    <form id="bookingForm" class="dialog-form">
+      <div class="dialog-top"><div><span class="eyebrow">RESERVE A CHARGER</span><h2>Make it your stop<span class="heading-period">.</span></h2></div><button class="icon-button" type="button" data-close-dialog="bookingDialog" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+      <div id="bookingStationSummary" class="dialog-station-summary"></div>
+      <label>Your electric vehicle<select id="bookingVehicle" name="vehicleId" required></select></label>
+      <label>Available port<select id="bookingPort" name="portId" required><option value="">Choose a port</option></select><small id="portHint" class="field-hint">Port options update to match your EV and time.</small></label>
+      <div class="dialog-time-grid"><label>From<input id="bookingFrom" name="startAt" type="datetime-local" required></label><label>Until<input id="bookingTo" name="endAt" type="datetime-local" required></label></div>
+      <div id="bookingEstimate" class="booking-estimate"><span>Estimated station rate</span><strong id="bookingRate">Select a station</strong></div>
+      <p id="bookingMessage" class="form-message" aria-live="polite"></p>
+      <div class="dialog-actions"><button type="button" class="button button-quiet" data-close-dialog="bookingDialog">Not now</button><button class="button button-primary" type="submit" id="reserveButton">Confirm reservation <svg><use href="#i-arrow"/></svg></button></div>
+    </form>
+  </dialog>
+
+  <dialog id="faultDialog" class="app-dialog app-dialog-small">
+    <form id="faultForm" class="dialog-form">
+      <div class="dialog-top"><div><span class="eyebrow">NETWORK CARE</span><h2>Report a port issue</h2></div><button class="icon-button" type="button" data-close-dialog="faultDialog" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+      <label>Station port<select name="portId" id="faultPort" required></select></label>
+      <label>Issue type<select name="category" required><option value="CONNECTOR_FAULT">Connector fault</option><option value="POWER_ISSUE">Power issue</option><option value="DISPLAY_ISSUE">Screen or display</option><option value="OTHER">Other</option></select></label>
+      <label>What happened?<textarea name="description" rows="3" required maxlength="1000" placeholder="Describe what you noticed"></textarea></label>
+      <input type="hidden" name="priority" value="NORMAL">
+      <p id="faultMessage" class="form-message" aria-live="polite"></p>
+      <div class="dialog-actions"><button type="button" class="button button-quiet" data-close-dialog="faultDialog">Cancel</button><button class="button button-primary" type="submit">Send report <svg><use href="#i-arrow"/></svg></button></div>
+    </form>
+  </dialog>
+
+  <footer><a class="footer-brand" href="#top">chargeops<span>.</span></a><span>Database first. Every session accounted for.</span><button id="reportIssue" class="footer-report hidden" type="button">Report a port issue</button><span class="footer-tag">DEMO BUILD · 2026</span></footer>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
