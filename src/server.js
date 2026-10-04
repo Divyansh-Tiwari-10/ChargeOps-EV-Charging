@@ -84,8 +84,8 @@ app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
   const radius = Number(req.query.radius || 5000);
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
       !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
-      !Number.isFinite(radius) || radius < 500 || radius > 10000) {
-    throw badRequest('Provide valid coordinates and a search radius between 500 m and 10 km.');
+      !Number.isFinite(radius) || radius < 500 || radius > 20000) {
+    throw badRequest('Provide valid coordinates and a search radius between 500 m and 20 km.');
   }
   const cacheKey = [latitude.toFixed(3), longitude.toFixed(3), Math.round(radius / 500) * 500].join(',');
   let result = cacheRead(chargerCache, cacheKey);
@@ -149,7 +149,6 @@ app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
       };
     }).filter(Boolean);
     const officialSnapshot = beeStations.filter(station => distanceKm({ latitude, longitude }, station) <= radius / 1000);
-    if (overpassUnavailable && !officialSnapshot.length) throw Object.assign(new Error('The community charger map is busy. Try again shortly.'), { status: 503 });
     const combined = [...elements];
     for (const station of officialSnapshot) {
       const duplicate = combined.find(mapped => distanceKm(mapped, station) < 0.08);

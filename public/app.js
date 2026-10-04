@@ -1,6 +1,7 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const state = { token: localStorage.getItem('chargeops_token'), user: null, authMode: 'login', vehicles: [], models: [], stations: [], demoStations: [], publicStations: [], mapRawStations: [], selectedStation: null, activityFilter: 'all', map: null, markers: null, mapCenter: { latitude: 19.2403, longitude: 73.1305 }, locationMarker: null, currentLocation: null, mapRequest: 0, placeRequest: 0, mapUnavailable: false };
+const state = { token: localStorage.getItem('chargeops_token'), user: null, authMode: 'login', vehicles: [], models: [], stations: [], demoStations: [], publicStations: [], mapRawStations: [], selectedStation: null, activityFilter: 'all', map: null, markers: null, mapCenter: { latitude: 19.2403, longitude: 73.1305 }, locationMarker: null, currentLocation: null, mapRequest: 0, placeRequest: 0, mapUnavailable: false, publicMapSourceUnavailable: false, lastGeocodedQuery: '', lastGeocodedPlace: '' };
+const INDIA_STATES_AND_UTS = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman & Nicobar Islands','Chandigarh','Dadra And Nagar Haveli And Daman And Diu','Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry'];
 
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -186,6 +187,17 @@ function publicStationAddress(station) {
   if (name && publicStationTitle(station) !== name) return name;
   return [station.city, station.district, station.state].filter(Boolean).join(', ') || 'Address not listed by source';
 }
+function googleMapsStationSearchUrl(location) {
+  const typedPlace = String(location || '').trim();
+  const place = state.lastGeocodedQuery.toLocaleLowerCase() === typedPlace.toLocaleLowerCase() ? state.lastGeocodedPlace : typedPlace;
+  if (place.length < 4 && !INDIA_STATES_AND_UTS.some(name => name.toLocaleLowerCase() === place.toLocaleLowerCase())) return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('EV charging stations in India');
+  const query = place ? 'EV charging stations near ' + place + ( /\bIndia\b/i.test(place) ? '' : ', India') : 'EV charging stations in India';
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+}
+function updateGoogleMapsSearchLink() {
+  const link = $('#googleMapsSearch');
+  if (link) link.href = googleMapsStationSearchUrl($('[name="city"]').value);
+}
 function stationReviewsUrl(station) {
   const query = [publicStationTitle(station), 'EV charging station', station.brand, station.operator, station.city, station.state, station.latitude + ',' + station.longitude].filter(Boolean).join(' ');
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
@@ -194,6 +206,16 @@ function stationDirectionsUrl(station) {
   const params = new URLSearchParams({ api: '1', destination: station.latitude + ',' + station.longitude, travelmode: 'driving' });
   if (state.currentLocation) params.set('origin', state.currentLocation.latitude + ',' + state.currentLocation.longitude);
   return 'https://www.google.com/maps/dir/?' + params.toString();
+}
+function publicStationEmptyState(stations) {
+  if (stations.length) return '<div class="empty-state">No mapped stations list this connector. Clear the connector filter or confirm compatibility with the operator.</div>';
+  const radius = Number($('[name="radius"]').value) || 5000;
+  const nextRadius = radius < 10000 ? 10000 : radius < 20000 ? 20000 : 0;
+  const expandAction = nextRadius ? '<button class="button button-outline" type="button" data-expand-radius="' + nextRadius + '">Search within ' + (nextRadius / 1000) + ' km</button>' : '';
+  const title = state.publicMapSourceUnavailable ? 'Live charger data could not be reached' : 'No mapped charger records within ' + (radius / 1000) + ' km';
+  const message = state.publicMapSourceUnavailable ? 'ChargeOps could not reach the live community charger map, and its dated BEE snapshot has no records in this radius. Open Google Maps to search this place now, or retry ChargeOps.' : 'This area has no matching records in the sources currently available to ChargeOps. That does not confirm there are no working chargers nearby.';
+  const retry = state.publicMapSourceUnavailable ? '<button class="button button-outline" type="button" data-retry-stations>Retry ChargeOps</button>' : '';
+  return '<div class="empty-state public-empty-state"><strong>' + title + '</strong><p>' + message + '</p><div class="public-empty-actions">' + expandAction + retry + '<a class="button button-primary" href="' + html(googleMapsStationSearchUrl($('[name="city"]').value)) + '" target="_blank" rel="noopener">Search Google Maps ↗</a><a class="button button-outline" href="https://www.beeindia.gov.in/show_content.php?lang=1&amp;level=2&amp;lid=67&amp;ls_id=345" target="_blank" rel="noopener">BEE national charger data ↗</a><a class="button button-outline" href="https://xprest.tatamotors.com/electric/chargingpoint" target="_blank" rel="noopener">Tata charger directory ↗</a></div><small>Station coverage and operating status can be incomplete. Confirm details with the operator.</small></div>';
 }
 function stationPricingUrl(station) {
   const query = [station.operator, station.name, station.address, station.city, station.state, 'EV charging tariff price per kWh'].filter(Boolean).join(' ');
@@ -260,7 +282,7 @@ function renderPublicStations(stations, center, fit = false) {
       '<a class="button button-outline" href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Station reviews ↗</a>' +
       '<a class="button button-outline" href="' + html(stationDirectionsUrl(station)) + '" target="_blank" rel="noopener">Directions ↗</a>' +
       '</div></article>';
-  }).join('') : '<div class="empty-state">' + (stations.length ? 'No nearby stations list this connector in OpenStreetMap. Clear the connector filter or verify with a local operator.' : 'OpenStreetMap has no charger records in this area yet. That does not mean there are no real chargers here; coverage can be incomplete. Check the <a href="https://xprest.tatamotors.com/electric/chargingpoint" target="_blank" rel="noopener">Tata charging point directory ↗</a> or <a href="https://evyatra.beeindia.gov.in/" target="_blank" rel="noopener">BEE EV Yatra ↗</a>, and confirm details with the operator.') + '</div>';
+  }).join('') : publicStationEmptyState(stations);
   drawPublicMap(filtered, center, fit);
 }
 function setStationSearchLoading(query) {
@@ -277,7 +299,8 @@ function setStationSearchFinished() {
 }
 function setStationSearchError(error) {
   $('#resultCount').textContent = 'SEARCH FAILED';
-  $('#stationResults').innerHTML = '<div class="empty-state station-search-error" role="alert">Could not load stations for this location. ' + html(error.message || 'Please try again.') + ' Check the place name and try again.</div>';
+  const location = $('[name="city"]').value;
+  $('#stationResults').innerHTML = '<div class="empty-state public-empty-state station-search-error" role="alert"><strong>ChargeOps could not load its nearby station data.</strong><p>' + html(error.message || 'Please try again.') + ' You can still search this location directly on Google Maps.</p><div class="public-empty-actions"><a class="button button-primary" href="' + html(googleMapsStationSearchUrl(location)) + '" target="_blank" rel="noopener">Search EV chargers near ' + html(location) + ' on Google Maps ↗</a><button class="button button-outline" type="button" data-retry-stations>Try ChargeOps again</button></div></div>';
 }
 async function loadPublicChargers(center, radius, options = {}) {
   const requestId = ++state.mapRequest;
@@ -288,10 +311,11 @@ async function loadPublicChargers(center, radius, options = {}) {
     if (requestId !== state.mapRequest) return;
     state.mapCenter = center;
     state.mapRawStations = data.stations || [];
+    state.publicMapSourceUnavailable = Boolean(data.overpass_unavailable);
     renderPublicStations(data.stations || [], center, options.fit);
     const updated = data.overpass_unavailable ? ' · Live OSM query unavailable' : data.source_timestamp ? ' · OSM updated ' + new Date(data.source_timestamp).toLocaleString() : '';
-    const snapshot = ' · BEE snapshot 26 Oct 2025 (' + Number(data.national_dataset_count || 0).toLocaleString() + ' sites nationwide)';
-    $('#mapStatus').textContent = (data.overpass_unavailable ? 'Showing archived records only: ' : '') + data.stations.length + ' public record' + (data.stations.length === 1 ? '' : 's') + ' within ' + (radius / 1000).toFixed(0) + ' km' + updated + snapshot + '. Prices and availability are not live.';
+    const snapshot = ' · BEE snapshot 26 Oct 2025 (' + Number(data.national_dataset_count || 0).toLocaleString() + ' records nationwide)';
+    $('#mapStatus').textContent = (data.overpass_unavailable ? 'Live charger map unavailable; ' : '') + data.stations.length + ' mapped record' + (data.stations.length === 1 ? '' : 's') + ' within ' + (radius / 1000).toFixed(0) + ' km' + updated + snapshot + '. Prices and availability are not live.';
     if (state.mapUnavailable) showMapMessage('Interactive map library did not load. Charger results are listed below.', true);
     else hideMapMessage();
   } catch (error) {
@@ -311,8 +335,11 @@ async function searchStations() {
     const { place } = await api('/map/geocode?q=' + encodeURIComponent(query));
     if (placeRequest !== state.placeRequest) return;
     const center = { latitude: Number(place.latitude), longitude: Number(place.longitude) };
+    state.lastGeocodedQuery = query;
+    state.lastGeocodedPlace = place.display_name || query;
+    updateGoogleMapsSearchLink();
     $('#mapStatus').textContent = 'Showing mapped public charger points near ' + query + '.';
-    if (state.map) state.map.setView([center.latitude, center.longitude], radius <= 3000 ? 15 : radius <= 5000 ? 14 : 13);
+    if (state.map) state.map.setView([center.latitude, center.longitude], radius <= 3000 ? 15 : radius <= 5000 ? 14 : radius <= 10000 ? 13 : 12);
     await loadPublicChargers(center, radius, { fit: true });
   } catch (error) {
     if (placeRequest !== state.placeRequest) return;
@@ -328,7 +355,7 @@ function loadMapArea() {
   const center = state.map.getCenter();
   const bounds = state.map.getBounds();
   const northEast = bounds.getNorthEast();
-  const radius = Math.min(10000, Math.max(1000, Math.round(stationDistanceKm({ latitude:center.lat, longitude:center.lng }, { latitude:northEast.lat, longitude:northEast.lng }) * 1000)));
+  const radius = Math.min(20000, Math.max(1000, Math.round(stationDistanceKm({ latitude:center.lat, longitude:center.lng }, { latitude:northEast.lat, longitude:northEast.lng }) * 1000)));
   return loadPublicChargers({ latitude:center.lat, longitude:center.lng }, radius, { fit:false });
 }
 function searchMyLocation() {
@@ -437,6 +464,7 @@ $('#authForm').addEventListener('submit', handleAuth);
 let placeSearchTimer;
 $('#searchForm').addEventListener('submit', async e => { e.preventDefault(); clearTimeout(placeSearchTimer); try { await searchStations(); } catch (error) { showMapMessage(error.message, true); } });
 $('[name="city"]').addEventListener('input', e => {
+  updateGoogleMapsSearchLink();
   clearTimeout(placeSearchTimer);
   const query = e.currentTarget.value.trim();
   state.placeRequest++;
@@ -456,8 +484,18 @@ $('[name="city"]').addEventListener('input', e => {
     }
   }, 700);
 });
-$('.quick-filters').addEventListener('click', e => { const button = e.target.closest('[data-filter-city]'); if (!button) return; clearTimeout(placeSearchTimer); $('[name="city"]').value = button.dataset.filterCity; $('#searchForm').requestSubmit(); });
+$('.quick-filters').addEventListener('click', e => { const button = e.target.closest('[data-filter-city]'); if (!button) return; clearTimeout(placeSearchTimer); $('[name="city"]').value = button.dataset.filterCity; updateGoogleMapsSearchLink(); $('#searchForm').requestSubmit(); });
 $('#stationResults').addEventListener('click', e => {
+  if (e.target.closest('[data-retry-stations]')) {
+    $('#searchForm').requestSubmit();
+    return;
+  }
+  const expand = e.target.closest('[data-expand-radius]');
+  if (expand) {
+    $('[name="radius"]').value = expand.dataset.expandRadius;
+    $('#searchForm').requestSubmit();
+    return;
+  }
   const button = e.target.closest('[data-public-map]');
   if (button) {
     const station = state.publicStations.find(item => (item.map_id || item.osm_id) === button.dataset.publicMap);
@@ -478,6 +516,7 @@ $('#mapZoomToResults').addEventListener('click', () => {
 $('#useMyLocation').addEventListener('click', searchMyLocation);
 $('[name="connector"]').addEventListener('change', () => renderPublicStations(state.mapRawStations, state.mapCenter, false));
 $('[name="radius"]').addEventListener('change', () => searchStations().catch(error => showMapMessage(error.message, true)));
+updateGoogleMapsSearchLink();
 $('#vehicleForm').addEventListener('submit', e => addVehicle(e).catch(error => toast(error.message,true)));
 $('#toggleVehicleForm').addEventListener('click', () => { $('#vehicleForm').classList.toggle('hidden'); if (!$('#vehicleForm').classList.contains('hidden')) $('[name="vin"]').focus(); });
 $('#cancelVehicle').addEventListener('click', () => $('#vehicleForm').classList.add('hidden'));

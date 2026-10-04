@@ -95,6 +95,8 @@
 .quick-filters{gap:9px}
 .quick-filters>span{font-size:10px}
 .quick-filters button{font-size:12px;padding:9px 12px}
+.quick-filters .google-maps-search{border:1px solid #d7e4d2;background:#f3f8ef;border-radius:20px;padding:9px 12px;font-size:12px;color:#466d3e;text-decoration:none;font-weight:700}
+.quick-filters .google-maps-search:hover{border-color:#afc99c;background:#eaf3e3}
 .booking-path-card{gap:14px;padding:15px 16px}
 .booking-path-icon{width:40px;height:40px}
 .booking-path-card strong{font-size:14px}
@@ -103,6 +105,13 @@
 .station-card h3{font-size:16px}
 .station-card p,.station-tags{font-size:12px;color:#5e6d62}
 .station-card p.station-address{margin-top:4px;color:#34483a;font-size:12px;line-height:1.45}
+.public-empty-state{display:grid;justify-items:center;gap:9px;padding:23px 20px;color:#5f6f64}
+.public-empty-state>strong{font-size:15px;color:#304337}
+.public-empty-state>p{max-width:620px;margin:0}
+.public-empty-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:3px 0}
+.public-empty-actions .button{font-size:11px;text-decoration:none}
+.public-empty-state>small{font-size:10px;color:#829087}
+.quick-filters .google-maps-search{font-size:11px;padding:8px 10px}
 .station-data-note{font-size:11px;color:#725f46;line-height:1.5}
 .station-card-end .button{font-size:12px;padding:10px 12px}
 .map-action{font-size:11px;padding:9px 11px}
