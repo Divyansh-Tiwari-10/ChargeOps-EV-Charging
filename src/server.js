@@ -215,6 +215,9 @@ app.get('/api/stations', asyncRoute(async (req, res) => {
   if (city) { filters.push('s.city=?'); params.push(String(city)); }
   const [stations] = await pool.execute(
     `SELECT s.station_id,s.name,s.address,s.city,s.region,s.latitude,s.longitude,
+            (SELECT GROUP_CONCAT(DISTINCT ct.connector_name ORDER BY ct.connector_name SEPARATOR ', ')
+             FROM charging_port cp JOIN port_connector pc ON pc.port_id=cp.port_id
+             JOIN connector_type ct ON ct.connector_id=pc.connector_id WHERE cp.station_id=s.station_id) AS connectors,
             (SELECT t.energy_rate_per_kwh FROM tariff t WHERE t.station_id=s.station_id
              AND t.effective_from<=UTC_TIMESTAMP(3) AND (t.effective_to IS NULL OR t.effective_to>UTC_TIMESTAMP(3))
              ORDER BY t.effective_from DESC LIMIT 1) AS energy_rate_per_kwh,

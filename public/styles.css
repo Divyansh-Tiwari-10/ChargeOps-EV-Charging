@@ -133,3 +133,47 @@
 .activity-panel .section-heading h2{font-size:24px}
 @media(max-width:760px){.explore-side{grid-template-columns:1fr}.map-card{grid-row:auto}}
 @media(max-width:520px){.section-heading h2,.activity-panel .section-heading h2{font-size:21px}.section-heading p{font-size:12px}.search-field>span:first-child{font-size:12px}.quick-filters button{font-size:11px;padding:8px 10px}.booking-path-card{align-items:flex-start}.booking-path-card>.button{font-size:11px}.station-card h3{font-size:14px}.station-card p,.station-tags{font-size:11px}.station-data-note{font-size:10px}.station-card-end .button{font-size:11px}.demo-network>summary b{font-size:14px}.demo-network>summary small{font-size:11px}.demo-station b{font-size:13px}.demo-station small{font-size:11px}.demo-station-meta{font-size:10px}.activity-tab{font-size:11px;padding:8px 9px}.booking-row strong{font-size:13px}.booking-row small{font-size:11px}.booking-price{font-size:12px}.booking-actions .button{font-size:10px}}
+@media(min-width:761px){.explore-layout{align-items:start}.explore-side{position:sticky;top:88px;align-self:start;max-height:calc(100vh - 102px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;scrollbar-width:thin;scrollbar-color:#cbd8c7 transparent}}
+.how-to-page{max-width:980px;margin:28px auto 36px;padding:clamp(24px,5vw,52px);scroll-margin-top:96px;animation:cardIn .28s ease-out}
+#appPanel.guide-active> :not(#how-it-works):not(#toast){display:none!important}
+#appPanel.booking-active> :not(#book):not(#toast),#appPanel.history-active> :not(#activity):not(#toast),#appPanel.operations-active> :not(#operations):not(#toast){display:none!important}
+.booking-page{max-width:1040px;margin:28px auto 36px;padding:clamp(24px,5vw,48px);animation:cardIn .28s ease-out}
+.booking-page-heading{max-width:760px}
+.booking-page-heading h1{margin:13px 0 10px;color:var(--ink);font:800 clamp(32px,4vw,44px)/1.1 var(--display);letter-spacing:-1.7px}
+.booking-page-heading>p,.booking-page-subhead p{margin:0;color:#5f6f64;font-size:15px;line-height:1.65}
+.booking-page-notice{display:grid;gap:5px;margin:22px 0 30px;padding:15px 17px;border:1px solid #e7e9cf;border-radius:12px;background:#faf9ef;color:#59694e;font-size:13px;line-height:1.6}
+.booking-page-notice b{color:#465a3e;font-size:14px}
+.booking-search-form{display:grid;grid-template-columns:minmax(180px,1.5fr) minmax(190px,1fr) auto;align-items:end;gap:12px;margin:0 0 27px}
+.booking-search-form label{display:grid;gap:7px;color:#435448;font-size:12px;font-weight:650}
+.booking-search-form input,.booking-search-form select{width:100%;height:46px;padding:0 13px;border:1px solid #dfe8dd;border-radius:10px;background:#fbfcfa;color:#344438;font-size:14px;outline:none}
+.booking-search-form input:focus,.booking-search-form select:focus{border-color:#85a96d;box-shadow:0 0 0 3px #85a96d20}
+.booking-search-button{height:46px;white-space:nowrap}
+.booking-search-button svg{width:16px;height:16px}
+.booking-page-subhead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.booking-page-subhead h2{margin:0 0 5px;color:#304338;font:700 20px/1.3 var(--display);letter-spacing:-.4px}
+.booking-page-subhead p{font-size:13px}
+.booking-page .demo-station-list{display:grid;gap:10px}
+.booking-page .demo-station{grid-template-columns:42px minmax(0,1fr) auto;gap:14px;padding:16px;border:1px solid #e7ece6;border-radius:13px;background:#fff}
+.booking-page .demo-station-pin{width:38px;height:38px}
+.booking-page .demo-station b{font-size:15px}
+.booking-page .demo-station small{font-size:13px;line-height:1.5}
+.booking-page .demo-station-meta{font-size:12px;line-height:1.5}
+.booking-page .demo-station>.button{font-size:12px;padding:11px 14px}
+.booking-page-back{margin-top:22px;text-decoration:none}
+.booking-hub-count{margin:0 0 10px;color:#76857a;font-size:12px}
+.how-to-book{margin:22px 8px 0 0;text-decoration:none}
+.how-to-book svg{width:15px;height:15px}
+.how-to-heading{max-width:720px;margin-bottom:28px}
+.how-to-heading h1{margin:13px 0 10px;color:var(--ink);font:800 clamp(30px,4vw,42px)/1.12 var(--display);letter-spacing:-1.6px}
+.how-to-heading>p{margin:0;color:#5f6f64;font-size:16px;line-height:1.65}
+.how-to-steps{display:grid;gap:12px;list-style:none;padding:0;margin:0}
+.how-to-steps li{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:start;gap:16px;padding:18px 19px;border:1px solid #e6ece3;border-radius:14px;background:#fcfdfa}
+.how-to-number{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#edf4e6;color:#547746;font:600 13px var(--mono)}
+.how-to-steps h2{margin:0 0 6px;color:#304338;font:700 17px/1.35 var(--display);letter-spacing:-.3px}
+.how-to-steps p{margin:0;color:#5e6d62;font-size:14px;line-height:1.7}
+.how-to-steps b{color:#344b3c}
+.how-to-back{margin-top:22px;text-decoration:none;font-size:13px}
+.how-to-back svg{width:15px;height:15px;transform:rotate(180deg)}
+@media(max-width:520px){.how-to-page{margin:16px auto 28px;padding:21px 16px}.how-to-heading{margin-bottom:20px}.how-to-heading>p{font-size:14px}.how-to-steps{gap:9px}.how-to-steps li{grid-template-columns:36px minmax(0,1fr);gap:11px;padding:14px 12px}.how-to-number{width:34px;height:34px;border-radius:10px;font-size:11px}.how-to-steps h2{font-size:15px}.how-to-steps p{font-size:13px;line-height:1.6}}
+@media(max-width:760px){.booking-search-form{grid-template-columns:1fr 1fr}.booking-location-field{grid-column:1/-1}.booking-search-button{grid-column:1/-1}}
+@media(max-width:620px){.booking-page{margin:16px auto 28px;padding:22px 16px}.booking-page-heading>p{font-size:14px}.booking-page-notice{margin:17px 0 22px;padding:13px;font-size:12px}.booking-search-form{grid-template-columns:1fr;gap:10px}.booking-search-form label{font-size:12px}.booking-search-form input,.booking-search-form select{height:44px;font-size:13px}.booking-location-field,.booking-search-button{grid-column:auto}.booking-page-subhead{align-items:flex-start}.booking-page-subhead h2{font-size:18px}.booking-page-subhead p{font-size:12px}.booking-page-subhead>.button{white-space:nowrap;padding:9px;font-size:11px}.booking-page .demo-station{grid-template-columns:34px minmax(0,1fr);gap:10px;padding:12px}.booking-page .demo-station-pin{width:32px;height:32px}.booking-page .demo-station b{font-size:14px}.booking-page .demo-station small{font-size:12px}.booking-page .demo-station-meta{font-size:11px}.booking-page .demo-station>.button{grid-column:2;justify-self:start;font-size:12px}}

@@ -111,7 +111,18 @@ async function loadDemoStations() {
   const { stations } = await api('/stations');
   state.demoStations = stations;
   state.stations = stations;
-  $('#demoStationResults').innerHTML = stations.length ? stations.map(s => '<article class="demo-station"><span class="demo-station-pin"><svg><use href="#i-pin"/></svg></span><div><b>' + html(s.name) + '</b><small>' + html(s.address) + ' · ' + html(s.city) + '</small><span class="demo-station-meta">' + Number(s.available_ports || 0) + ' free sample ports · ' + (s.energy_rate_per_kwh ? '₹' + Number(s.energy_rate_per_kwh).toFixed(2) + '/kWh' : 'rate shown at billing') + '</span></div><button class="button button-quiet" data-action="ports" data-id="' + s.station_id + '">Book sample session</button></article>').join('') : '<div class="empty-state">No sample stations are available.</div>';
+  renderDemoStations();
+}
+function renderDemoStations() {
+  const query = $('#bookingLocation').value.trim().toLocaleLowerCase();
+  const connector = $('#bookingType').value;
+  const stations = state.demoStations.filter(station => {
+    const matchesLocation = !query || [station.name,station.address,station.city,station.region].filter(Boolean).join(' ').toLocaleLowerCase().includes(query);
+    const connectors = String(station.connectors || '').split(',').map(value => value.trim().toLocaleLowerCase());
+    return matchesLocation && (!connector || connectors.includes(connector.toLocaleLowerCase()));
+  });
+  $('#bookingHubCount').textContent = `${stations.length} matching sample ${stations.length === 1 ? 'hub' : 'hubs'}${query ? ` · ${$('#bookingLocation').value.trim()}` : ''}${connector ? ` · ${connector === 'Type2' ? 'AC Type 2' : `DC ${connector}`}` : ''}`;
+  $('#demoStationResults').innerHTML = stations.length ? stations.map(s => '<article class="demo-station"><span class="demo-station-pin"><svg><use href="#i-pin"/></svg></span><div><b>' + html(s.name) + '</b><small>' + html(s.address) + ' · ' + html(s.city) + '</small><span class="demo-station-meta">' + Number(s.available_ports || 0) + ' free sample ports · ' + html(s.connectors || 'Connector details shown after selection') + ' · ' + (s.energy_rate_per_kwh ? '₹' + Number(s.energy_rate_per_kwh).toFixed(2) + '/kWh sample tariff' : 'rate shown at billing') + '</span></div><button class="button button-quiet" data-action="ports" data-id="' + s.station_id + '">Choose time & book</button></article>').join('') : '<div class="empty-state">No sample hubs match these filters. Try a different location or charging type.</div>';
 }
 
 function showMapMessage(message, isError = false) {
@@ -297,7 +308,13 @@ function searchMyLocation() {
 }
 
 async function openBooking(stationId, from = '', to = '') {
-  if (!state.vehicles.length) { toast('Add an EV to your garage first.', true); $('#vehicleForm').classList.remove('hidden'); $('#garage').scrollIntoView({behavior:'smooth'}); return; }
+  if (!state.vehicles.length) {
+    toast('Add your EV before choosing a compatible booking port.', true);
+    $('#vehicleForm').classList.remove('hidden');
+    location.hash = '#explore';
+    setTimeout(() => $('#garage').scrollIntoView({behavior:'smooth', block:'center'}), 80);
+    return;
+  }
   const { station } = await api(`/stations/${stationId}`); state.selectedStation = station;
   $('#bookingStationSummary').innerHTML = `<span class="summary-pin"><svg><use href="#i-pin"/></svg></span><div><strong>${html(station.name)}</strong><small>${html(station.address)} · ${html(station.city)}</small></div>`;
   $('#bookingRate').textContent = station.energy_rate_per_kwh ? `Demo ₹${Number(station.energy_rate_per_kwh).toFixed(2)} / kWh${Number(station.session_fee)>0?` · ₹${Number(station.session_fee).toFixed(0)} sample session fee`:''}` : 'Demo rate shown on final invoice';
@@ -379,11 +396,10 @@ $('#stationResults').addEventListener('click', e => {
   }
 });
 $('#demoStationResults').addEventListener('click', e => { const button = e.target.closest('[data-action="ports"]'); if (button) handleBookingAction(button).catch(error => toast(error.message,true)); });
-$('#showDemoBooking').addEventListener('click', () => {
-  const panel = $('#demoNetwork');
-  panel.open = true;
-  panel.scrollIntoView({ behavior:'smooth', block:'center' });
-});
+$('#refreshDemoStations').addEventListener('click', () => loadDemoStations().catch(error => toast(error.message,true)));
+$('#bookingSearchForm').addEventListener('submit', e => { e.preventDefault(); renderDemoStations(); });
+$('#bookingLocation').addEventListener('input', renderDemoStations);
+$('#bookingType').addEventListener('change', renderDemoStations);
 $('#searchMapArea').addEventListener('click', () => loadMapArea()?.catch(error => toast(error.message,true)));
 $('#mapZoomToResults').addEventListener('click', () => {
   if (state.markers?.getLayers().length > 1) state.map.fitBounds(publicMarkerBounds().pad(.16), { maxZoom:15 });
@@ -409,12 +425,27 @@ $('#refreshMaintenance').addEventListener('click', () => loadMaintenance().catch
 $('#maintenanceResults').addEventListener('click', async e => { const button = e.target.closest('[data-action="resolve"]'); if (!button) return; try { await api(`/maintenance/${button.dataset.id}/resolve`,{method:'PATCH',body:'{}'}); toast('Maintenance ticket resolved.'); await Promise.all([loadMaintenance(),loadDemoStations()]); } catch(error) { toast(error.message,true); } });
 $('#logout').addEventListener('click', () => { state.token = null; state.user = null; localStorage.removeItem('chargeops_token'); showApp(); });
 $('#mobileMenu').addEventListener('click', () => { $('#mainNav').classList.toggle('open'); $('#mobileMenu').setAttribute('aria-expanded',$('#mainNav').classList.contains('open')); });
-if (location.hash === '#activity') $('#activity').classList.remove('hidden');
-$$('.nav-link').forEach(link => link.addEventListener('click', () => {
+function syncPageFromHash() {
+  const routes = { '#book':'book', '#how-it-works':'how-it-works', '#activity':'activity', '#operations':'operations' };
+  const page = routes[location.hash] || 'explore';
+  const app = $('#appPanel');
+  app.classList.toggle('booking-active', page === 'book');
+  app.classList.toggle('guide-active', page === 'how-it-works');
+  app.classList.toggle('history-active', page === 'activity');
+  app.classList.toggle('operations-active', page === 'operations');
+  $('#book').classList.toggle('hidden', page !== 'book');
+  $('#how-it-works').classList.toggle('hidden', page !== 'how-it-works');
+  $('#activity').classList.toggle('hidden', page !== 'activity');
+  $$('.nav-link').forEach(link => {
+    const hrefPage = routes[link.getAttribute('href')] || 'explore';
+    link.classList.toggle('active', hrefPage === page);
+  });
   $('#mainNav').classList.remove('open');
-  if (link.getAttribute('href') !== '#activity') $('#activity').classList.add('hidden');
-}));
-$$('a[href="#activity"]').forEach(link => link.addEventListener('click', () => $('#activity').classList.remove('hidden')));
+  $('#mobileMenu').setAttribute('aria-expanded', 'false');
+  if (page === 'explore') setTimeout(() => state.map?.invalidateSize(), 120);
+}
+window.addEventListener('hashchange', syncPageFromHash);
+syncPageFromHash();
 
 setDateDefaults();
 showApp();

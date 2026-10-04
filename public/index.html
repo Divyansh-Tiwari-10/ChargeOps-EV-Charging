@@ -33,11 +33,12 @@
     </a>
     <nav id="mainNav" class="main-nav signed-in-only hidden" aria-label="Main navigation">
       <a class="nav-link active" href="#explore">Explore</a>
+      <a class="nav-link" href="#book">Book a session</a>
       <a class="nav-link" id="historyNavLink" href="#activity">Charging history</a>
+      <a class="nav-link" id="howItWorksNavLink" href="#how-it-works">How it works</a>
       <a class="nav-link operational-link hidden" href="#operations">Operations</a>
     </nav>
     <div class="top-actions">
-      <a class="top-help signed-in-only hidden" href="#how-it-works">How it works</a>
       <span id="whoami" class="user-chip hidden"><span class="user-avatar" id="userAvatar">D</span><span id="userName"></span></span>
       <button id="logout" class="button button-quiet hidden">Sign out</button>
       <button id="mobileMenu" class="icon-button mobile-menu signed-in-only hidden" aria-label="Open menu"><svg><use href="#i-menu"/></svg></button>
@@ -111,20 +112,11 @@
             <button class="button button-primary search-submit" type="submit"><svg><use href="#i-search"/></svg> Find real stations</button>
           </form>
           <div class="quick-filters"><span>NEARBY SEARCH:</span><button type="button" data-filter-city="Kalyan, Maharashtra">Kalyan</button><button type="button" data-filter-city="Dombivli, Maharashtra">Dombivli</button><button type="button" data-filter-city="Thane, Maharashtra">Thane</button><button type="button" id="useMyLocation">◎ Use my location</button></div>
-          <div class="booking-path-card"><span class="booking-path-icon"><svg><use href="#i-bolt"/></svg></span><div><strong>Want to try a booking?</strong><p>Public stations are for discovery; operator booking isn’t connected. Try a simulated session at a sample hub across India.</p></div><button id="showDemoBooking" class="button button-outline" type="button" aria-controls="demoNetwork">See India sample hubs <svg><use href="#i-arrow"/></svg></button></div>
+          <div class="booking-path-card"><span class="booking-path-icon"><svg><use href="#i-bolt"/></svg></span><div><strong>Want to book a session?</strong><p>Choose a sample hub to reserve a compatible port and appointment time. Public listings aren’t connected to operator booking systems.</p></div><a id="showDemoBooking" class="button button-outline" href="#book">Book a session <svg><use href="#i-arrow"/></svg></a></div>
           <div id="stationResults" class="station-results"><div class="empty-state">Loading stations from the network…</div></div>
         </div>
 
         <aside class="explore-side">
-          <section class="map-card panel reveal">
-            <div class="map-head"><span class="eyebrow">REAL-WORLD MAP</span><span class="map-live"><i></i> OPEN DATA</span></div>
-            <div class="map-controls"><button id="searchMapArea" type="button" class="map-action">Search this map area</button><button id="mapZoomToResults" type="button" class="map-action" disabled>Fit stations</button></div>
-            <div id="networkMap" class="network-map" aria-label="Interactive map showing mapped public EV charging stations">
-              <div id="mapLoading" class="map-overlay"><span class="map-spinner"></span><span id="mapStatus">Search a place to load nearby chargers.</span></div>
-            </div>
-            <div class="map-legend"><span><i class="legend-dot available"></i>Public station record</span><span><i class="legend-dot busy"></i>Live availability unknown</span></div>
-            <div class="map-attribution-note">Map & location data © OpenStreetMap contributors</div>
-          </section>
           <section class="panel garage-panel reveal" id="garage">
             <div class="section-heading"><div><span class="eyebrow">YOUR GARAGE</span><h2>Your EVs<span class="heading-period">.</span></h2><p>We’ll match your car to a compatible booking port.</p></div><button id="toggleVehicleForm" class="button button-outline" type="button">＋ Add EV</button></div>
             <div id="vehicleList" class="vehicle-list"></div>
@@ -135,16 +127,43 @@
               <div class="form-actions"><button class="button button-quiet" type="button" id="cancelVehicle">Cancel</button><button class="button button-primary" type="submit">Add to garage <svg><use href="#i-arrow"/></svg></button></div>
             </form>
           </section>
-          <section class="tip-card reveal" id="how-it-works">
-            <div class="tip-orb"><svg><use href="#i-leaf"/></svg></div><div><span class="eyebrow">A BETTER WAY TO PLUG IN</span><p>Your reservation, session readings, and invoice stay linked from start to finish.</p><a href="#activity">See your charging activity <svg><use href="#i-arrow"/></svg></a></div>
+          <section class="map-card panel reveal">
+            <div class="map-head"><span class="eyebrow">REAL-WORLD MAP</span><span class="map-live"><i></i> OPEN DATA</span></div>
+            <div class="map-controls"><button id="searchMapArea" type="button" class="map-action">Search this map area</button><button id="mapZoomToResults" type="button" class="map-action" disabled>Fit stations</button></div>
+            <div id="networkMap" class="network-map" aria-label="Interactive map showing mapped public EV charging stations">
+              <div id="mapLoading" class="map-overlay"><span class="map-spinner"></span><span id="mapStatus">Search a place to load nearby chargers.</span></div>
+            </div>
+            <div class="map-legend"><span><i class="legend-dot available"></i>Public station record</span><span><i class="legend-dot busy"></i>Live availability unknown</span></div>
+            <div class="map-attribution-note">Map & location data © OpenStreetMap contributors</div>
           </section>
         </aside>
       </section>
 
-      <details class="demo-network panel" id="demoNetwork">
-        <summary><span><b>Pan-India sample booking network</b><small>Simulated locations, prices, and reservations · not connected to public charging operators</small></span><span class="demo-chevron">＋</span></summary>
-        <div class="demo-station-list" id="demoStationResults"><div class="empty-state">Load the booking demo stations after signing in.</div></div>
-      </details>
+      <section id="book" class="booking-page panel hidden" aria-labelledby="bookingPageTitle">
+        <div class="booking-page-heading"><span class="eyebrow"><span class="eyebrow-dot"></span> PLAN YOUR CHARGE</span><h1 id="bookingPageTitle">Book a session<span class="heading-period">.</span></h1><p>Choose a sample charging hub, then select your EV, a compatible available port, and your appointment time.</p></div>
+        <div class="booking-page-notice"><b>Sample booking network</b><span>These India-wide stations, rates, and reservations use ChargeOps demo data. Public station listings are not connected to operator reservation systems, so this page does not book a real-world charger.</span></div>
+        <form id="bookingSearchForm" class="booking-search-form">
+          <label class="booking-location-field">Search by location<input id="bookingLocation" name="location" type="search" placeholder="City, area, or station name" autocomplete="off"></label>
+          <label class="booking-type-field">Charging type<select id="bookingType" name="type"><option value="">Any charging type</option><option value="Type2">AC charging · Type 2</option><option value="CCS2">DC fast charging · CCS2</option><option value="CHAdeMO">DC fast charging · CHAdeMO</option></select></label>
+          <button class="button button-primary booking-search-button" type="submit"><svg><use href="#i-search"/></svg> Find hubs</button>
+        </form>
+        <div class="booking-page-subhead"><div><h2>Choose a charging hub</h2><p>Port availability is checked against your selected EV and requested time.</p></div><button id="refreshDemoStations" class="button button-outline" type="button">Refresh hubs ↻</button></div>
+        <p id="bookingHubCount" class="booking-hub-count" aria-live="polite"></p>
+        <div class="demo-station-list" id="demoStationResults"><div class="empty-state">Loading sample booking hubs…</div></div>
+        <a class="button button-quiet booking-page-back" href="#explore">Back to Explore</a>
+      </section>
+
+      <section id="how-it-works" class="how-to-page panel hidden" aria-labelledby="howToTitle">
+        <div class="how-to-heading"><span class="eyebrow"><span class="eyebrow-dot"></span> CHARGEOPS GUIDE</span><h1 id="howToTitle">How to use ChargeOps<span class="heading-period">.</span></h1><p>Follow these steps to find a public charger or try the sample booking workflow.</p></div>
+        <ol class="how-to-steps">
+          <li><span class="how-to-number">01</span><div><h2>Find nearby chargers</h2><p>In Explore, search for a city or area across India. Or choose <b>Use my location</b> and allow location access in your browser to search around you.</p></div></li>
+          <li><span class="how-to-number">02</span><div><h2>Check the public listing</h2><p>Listings combine OpenStreetMap records and a BEE dataset snapshot. Check directions, then confirm the station is open, working, compatible, and current with its operator. Live availability and current tariffs aren’t provided here.</p></div></li>
+          <li><span class="how-to-number">03</span><div><h2>Add your EV and try a booking</h2><p>Use <b>Your EVs</b> to add a vehicle. Public stations aren’t connected to operator booking systems; to try the flow, open <b>See India sample hubs</b>, choose a sample station, select a compatible port and time, then confirm the simulated booking.</p></div></li>
+          <li><span class="how-to-number">04</span><div><h2>Review your charging history</h2><p>Choose <b>Charging history</b> to view bookings, sessions, and invoices. Sample locations, rates, reservations, and payments are simulated and don’t reserve or charge a real station.</p></div></li>
+        </ol>
+        <a class="button button-primary how-to-book" href="#book">Go to Book a session <svg><use href="#i-arrow"/></svg></a>
+        <a class="button button-outline how-to-back" href="#explore">Back to Explore <svg><use href="#i-arrow"/></svg></a>
+      </section>
 
       <section class="lower-grid">
         <section id="analyticsPanel" class="panel insight-panel reveal">
