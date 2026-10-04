@@ -8,7 +8,7 @@
   <title>ChargeOps — your EV network</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/styles.css">
 </head>
@@ -29,7 +29,7 @@
   <header class="topbar">
     <a class="brand" href="#top" aria-label="ChargeOps home">
       <span class="brand-mark"><svg><use href="#i-bolt"/></svg></span>
-      <span class="brand-word">chargeops<span class="brand-dot">.</span><small>CHARGING NETWORK</small></span>
+      <span class="brand-word">ChargeOps<small>EV CHARGING</small></span>
     </a>
     <nav id="mainNav" class="main-nav signed-in-only hidden" aria-label="Main navigation">
       <a class="nav-link active" href="#explore">Explore</a>
@@ -67,7 +67,7 @@
           <p id="authMessage" class="form-message" aria-live="polite"></p>
         </form>
         <div class="auth-note"><span class="secure-icon">✓</span><span>Your account and charging history stay connected.</span></div>
-        <p class="fine-print">Student demo · synthetic network · simulated payments</p>
+        <p class="fine-print">Preview environment · bookings and payments are simulated</p>
       </div>
     </section>
 
@@ -193,7 +193,7 @@
     </form>
   </dialog>
 
-  <footer><a class="footer-brand" href="#top">chargeops<span>.</span></a><span>Database first. Every session accounted for.</span><button id="reportIssue" class="footer-report hidden" type="button">Report a port issue</button><span class="footer-tag">DEMO BUILD · 2026</span></footer>
+  <footer><a class="footer-brand" href="#top" aria-label="ChargeOps home">ChargeOps</a><span class="footer-message">Find a charge. Keep moving.</span><button id="reportIssue" class="footer-report hidden" type="button">Report a port issue</button><span class="footer-tag"><i></i> BOOKINGS ARE A PREVIEW</span></footer>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="/app.js" type="module"></script>
 </body>
