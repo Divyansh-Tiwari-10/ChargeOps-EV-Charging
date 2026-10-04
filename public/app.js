@@ -111,7 +111,7 @@ async function loadDemoStations() {
   const { stations } = await api('/stations');
   state.demoStations = stations;
   state.stations = stations;
-  $('#demoStationResults').innerHTML = stations.length ? stations.map(s => '<article class="demo-station"><span class="demo-station-pin"><svg><use href="#i-pin"/></svg></span><div><b>' + html(s.name) + '</b><small>' + html(s.address) + ' · ' + html(s.city) + '</small><span class="demo-station-meta">' + Number(s.available_ports || 0) + ' free sample ports · ' + (s.energy_rate_per_kwh ? '₹' + Number(s.energy_rate_per_kwh).toFixed(2) + '/kWh' : 'rate shown at billing') + '</span></div><button class="button button-quiet" data-action="ports" data-id="' + s.station_id + '">Try booking</button></article>').join('') : '<div class="empty-state">No sample stations are available.</div>';
+  $('#demoStationResults').innerHTML = stations.length ? stations.map(s => '<article class="demo-station"><span class="demo-station-pin"><svg><use href="#i-pin"/></svg></span><div><b>' + html(s.name) + '</b><small>' + html(s.address) + ' · ' + html(s.city) + '</small><span class="demo-station-meta">' + Number(s.available_ports || 0) + ' free sample ports · ' + (s.energy_rate_per_kwh ? '₹' + Number(s.energy_rate_per_kwh).toFixed(2) + '/kWh' : 'rate shown at billing') + '</span></div><button class="button button-quiet" data-action="ports" data-id="' + s.station_id + '">Book sample session</button></article>').join('') : '<div class="empty-state">No sample stations are available.</div>';
 }
 
 function showMapMessage(message, isError = false) {
@@ -379,6 +379,11 @@ $('#stationResults').addEventListener('click', e => {
   }
 });
 $('#demoStationResults').addEventListener('click', e => { const button = e.target.closest('[data-action="ports"]'); if (button) handleBookingAction(button).catch(error => toast(error.message,true)); });
+$('#showDemoBooking').addEventListener('click', () => {
+  const panel = $('#demoNetwork');
+  panel.open = true;
+  panel.scrollIntoView({ behavior:'smooth', block:'center' });
+});
 $('#searchMapArea').addEventListener('click', () => loadMapArea()?.catch(error => toast(error.message,true)));
 $('#mapZoomToResults').addEventListener('click', () => {
   if (state.markers?.getLayers().length > 1) state.map.fitBounds(publicMarkerBounds().pad(.16), { maxZoom:15 });

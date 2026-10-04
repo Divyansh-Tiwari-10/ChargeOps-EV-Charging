@@ -111,6 +111,7 @@
             <button class="button button-primary search-submit" type="submit"><svg><use href="#i-search"/></svg> Find real stations</button>
           </form>
           <div class="quick-filters"><span>NEARBY SEARCH:</span><button type="button" data-filter-city="Kalyan, Maharashtra">Kalyan</button><button type="button" data-filter-city="Dombivli, Maharashtra">Dombivli</button><button type="button" data-filter-city="Thane, Maharashtra">Thane</button><button type="button" id="useMyLocation">◎ Use my location</button></div>
+          <div class="booking-path-card"><span class="booking-path-icon"><svg><use href="#i-bolt"/></svg></span><div><strong>Want to try a booking?</strong><p>Public stations are for discovery; operator booking isn’t connected. Try a simulated session with a ChargeOps sample station.</p></div><button id="showDemoBooking" class="button button-outline" type="button" aria-controls="demoNetwork">View sample stations <svg><use href="#i-arrow"/></svg></button></div>
           <div id="stationResults" class="station-results"><div class="empty-state">Loading stations from the network…</div></div>
         </div>
 
@@ -131,7 +132,7 @@
       </section>
 
       <details class="demo-network panel" id="demoNetwork">
-        <summary><span><b>Try the booking workflow</b><small>ChargeOps sample stations · demo prices only, not current operator tariffs · reservations are not public operator bookings</small></span><span class="demo-chevron">＋</span></summary>
+        <summary><span><b>Sample booking network</b><small>Simulated prices and reservations · not connected to public charging operators</small></span><span class="demo-chevron">＋</span></summary>
         <div class="demo-station-list" id="demoStationResults"><div class="empty-state">Load the booking demo stations after signing in.</div></div>
       </details>
 

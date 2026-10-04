@@ -73,3 +73,13 @@
 .fine-print{font-size:9px;line-height:1.6}
 @media(max-width:760px){.footer-message{order:3;width:100%;text-align:center}.footer-tag{margin-left:auto}}
 @media(max-width:520px){footer{justify-content:space-between;gap:10px}.footer-message{order:4;text-align:left}.footer-tag{font-size:6px;padding:6px 8px}}
+
+.booking-path-card{display:flex;align-items:center;gap:12px;margin:16px 0;padding:13px 14px;border:1px solid #e2ebdc;border-radius:13px;background:linear-gradient(110deg,#f5f8f1,#fbfcfa)}
+.booking-path-icon{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:#e8f1df;color:#547a43}
+.booking-path-icon svg{width:16px;height:16px;fill:currentColor;stroke:none}
+.booking-path-card>div{flex:1;min-width:0}
+.booking-path-card strong{display:block;color:#344a39;font:700 10px var(--display)}
+.booking-path-card p{margin:4px 0 0;color:#7e8c80;font-size:8px;line-height:1.5}
+.booking-path-card>.button{flex:0 0 auto;padding:9px 11px;font-size:8px;white-space:nowrap}
+.booking-path-card>.button svg{width:12px;height:12px}
+@media(max-width:520px){.booking-path-card{align-items:flex-start;flex-wrap:wrap;padding:12px}.booking-path-card>div{flex:1 1 calc(100% - 48px)}.booking-path-card>.button{margin-left:46px}}
