@@ -102,6 +102,7 @@
 .booking-path-card>.button{font-size:12px;padding:11px 13px}
 .station-card h3{font-size:16px}
 .station-card p,.station-tags{font-size:12px;color:#5e6d62}
+.station-card p.station-address{margin-top:4px;color:#34483a;font-size:12px;line-height:1.45}
 .station-data-note{font-size:11px;color:#725f46;line-height:1.5}
 .station-card-end .button{font-size:12px;padding:10px 12px}
 .map-action{font-size:11px;padding:9px 11px}

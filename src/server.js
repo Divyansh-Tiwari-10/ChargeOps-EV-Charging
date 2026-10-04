@@ -90,7 +90,7 @@ app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
   const cacheKey = [latitude.toFixed(3), longitude.toFixed(3), Math.round(radius / 500) * 500].join(',');
   let result = cacheRead(chargerCache, cacheKey);
   if (!result) {
-    const query = '[out:json][timeout:20];nwr(around:' + Math.round(radius) + ',' + latitude + ',' + longitude + ')[amenity=charging_station];out center tags;';
+    const query = '[out:json][timeout:20];(nwr(around:' + Math.round(radius) + ',' + latitude + ',' + longitude + ')[amenity=charging_station];nwr(around:' + Math.round(radius) + ',' + latitude + ',' + longitude + ')[man_made=charge_point];);out center tags;';
     let payload = { elements: [] }, overpassUnavailable = false;
     try {
       const response = await fetch('https://overpass-api.de/api/interpreter', {
@@ -120,7 +120,8 @@ app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
         if (socket.startsWith('tesla')) return 'Tesla';
         return socket.replaceAll('_', ' ');
       }))];
-      const location = [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'], tags['addr:city'] || tags['addr:town']].filter(Boolean).join(', ');
+      const location = tags['addr:full'] || [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'], tags['addr:city'] || tags['addr:town']].filter(Boolean).join(', ');
+      const brand = tags.brand || tags.network || null;
       return {
         osm_id: element.type + '/' + element.id,
         map_id: element.type + '/' + element.id,
@@ -129,7 +130,9 @@ app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
         source_url: 'https://www.openstreetmap.org/' + element.type + '/' + element.id,
         source_date: null,
         availability_note: 'Live availability and pricing are not provided by map data.',
-        name: tags.name || tags.operator || 'Public charging station',
+        name: tags['name:charging_station'] || tags['charging_station:name'] || tags.name || brand || tags.operator || 'Public charging station',
+        brand,
+        site_name: tags.name || null,
         operator: tags.operator || tags.network || null,
         latitude: Number(point.lat),
         longitude: Number(point.lon),
@@ -153,6 +156,10 @@ app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
       if (duplicate) {
         duplicate.connectors = [...new Set([...duplicate.connectors, ...station.connectors])];
         duplicate.connector_details = [...new Set([...(duplicate.connector_details || []), ...station.connector_details])];
+        if (!duplicate.address) duplicate.address = station.address;
+        if (!duplicate.city) duplicate.city = station.city;
+        if (!duplicate.district) duplicate.district = station.district;
+        if (!duplicate.state) duplicate.state = station.state;
         duplicate.source_label += ' · BEE snapshot also lists this location';
         duplicate.source_url = station.source_url;
         duplicate.source_date = station.source_date;

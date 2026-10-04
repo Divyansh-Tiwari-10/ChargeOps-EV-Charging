@@ -167,9 +167,33 @@ function stationDistanceKm(a, b) {
   const part = Math.sin(dLat / 2) ** 2 + Math.cos(radians(a.latitude)) * Math.cos(radians(b.latitude)) * Math.sin(dLng / 2) ** 2;
   return 6371 * 2 * Math.atan2(Math.sqrt(part), Math.sqrt(1 - part));
 }
+function publicStationTitle(station) {
+  const name = String(station.name || '').trim();
+  const addressLike = /\b(road|rd\.?|street|st\.?|highway|marg|lane|near|opposite|opp\.?|bus station|bus stop|bus depot|railway station|metro station|shopping centre|shopping center|pin code|\d{6})\b/i.test(name);
+  const generic = /^(public )?(ev )?charging station$/i.test(name);
+  const identity = station.brand || station.operator;
+  if (name && !addressLike && !generic) {
+    if (identity && name.toLocaleLowerCase() === String(identity).trim().toLocaleLowerCase() && !/\b(charging|charger|charge point|evse|station)\b/i.test(name)) return name + ' Charging Station';
+    return name;
+  }
+  return identity ? identity + ' EV Charging Station' : 'Public EV Charging Station';
+}
+function publicStationAddress(station) {
+  const address = String(station.address || '').trim();
+  const name = String(station.name || '').trim();
+  if (address) return address;
+  if (station.site_name && station.site_name !== publicStationTitle(station)) return station.site_name;
+  if (name && publicStationTitle(station) !== name) return name;
+  return [station.city, station.district, station.state].filter(Boolean).join(', ') || 'Address not listed by source';
+}
 function stationReviewsUrl(station) {
-  const query = [station.name, station.operator, station.address, station.city, station.state, station.latitude + ',' + station.longitude].filter(Boolean).join(' ');
+  const query = [publicStationTitle(station), 'EV charging station', station.brand, station.operator, station.city, station.state, station.latitude + ',' + station.longitude].filter(Boolean).join(' ');
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+}
+function stationDirectionsUrl(station) {
+  const params = new URLSearchParams({ api: '1', destination: station.latitude + ',' + station.longitude, travelmode: 'driving' });
+  if (state.currentLocation) params.set('origin', state.currentLocation.latitude + ',' + state.currentLocation.longitude);
+  return 'https://www.google.com/maps/dir/?' + params.toString();
 }
 function stationPricingUrl(station) {
   const query = [station.operator, station.name, station.address, station.city, station.state, 'EV charging tariff price per kWh'].filter(Boolean).join(' ');
@@ -179,16 +203,15 @@ function publicMarkerBounds() {
   return L.latLngBounds(state.markers.getLayers().map(marker => marker.getLatLng()));
 }
 function stationPopup(station) {
-  const destination = station.latitude + ',' + station.longitude;
-  return '<div class="charger-popup"><b>' + html(station.name) + '</b>' +
+  return '<div class="charger-popup"><b>' + html(publicStationTitle(station)) + '</b>' +
     (station.operator ? '<span>' + html(station.operator) + '</span>' : '') +
-    '<small>' + html(station.address || 'Address not listed by source') + '</small>' +
+    '<small>' + html(publicStationAddress(station)) + '</small>' +
     '<small>' + html(station.connectors.join(' · ') || 'Connector details not mapped') + '</small>' +
     '<em>' + html(station.availability_note || 'Current tariff and live availability are not provided by map data. Confirm both with the operator.') + '</em>' +
     '<em>The current station price is not included in this map record.</em>' +
     '<a href="' + html(stationPricingUrl(station)) + '" target="_blank" rel="noopener">Search operator tariff ↗</a>' +
-    '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '" target="_blank" rel="noopener">Get directions ↗</a>' +
-    '<a href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Find reviews on Google Maps ↗</a>' +
+    '<a href="' + html(stationDirectionsUrl(station)) + '" target="_blank" rel="noopener">Get directions ↗</a>' +
+    '<a href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Search for station reviews on Google Maps ↗</a>' +
     '<a href="' + html(station.source_url || station.osm_url || '#') + '" target="_blank" rel="noopener">' + html(station.source_label || 'View source record') + ' ↗</a></div>';
 }
 function drawPublicMap(stations, center, fit = false) {
@@ -227,14 +250,15 @@ function renderPublicStations(stations, center, fit = false) {
     const connectorSummary = connectorDetails.slice(0, 2).join(' · ') + (connectorDetails.length > 2 ? ' · +' + (connectorDetails.length - 2) + ' more' : '');
     const facts = [connectorSummary || 'Connectors not mapped', station.power ? station.power + ' capacity' : 'Power not listed'];
     return '<article class="station-card public-station-card" data-public-id="' + html(station.map_id || station.osm_id) + '" style="--item:' + index + '">' +
-      '<span class="station-index">' + String(index + 1).padStart(2, '0') + '</span><div class="station-card-copy"><h3>' + html(station.name) + '</h3>' +
-      '<p>' + html(station.operator || 'Operator not listed') + ' · ' + km.toFixed(1) + ' km away</p>' +
+      '<span class="station-index">' + String(index + 1).padStart(2, '0') + '</span><div class="station-card-copy"><h3>' + html(publicStationTitle(station)) + '</h3>' +
+      '<p class="station-address">' + html(publicStationAddress(station)) + '</p>' +
+      '<p>' + html(station.operator || station.brand || 'Operator not listed') + ' · ' + km.toFixed(1) + ' km away</p>' +
       '<div class="station-tags"><span>' + html(facts[0]) + '</span><span>' + html(facts[1]) + '</span></div>' +
       '<div class="station-data-note">' + html(station.source_label || 'Map record') + ' · tariff not provided; confirm price and availability with operator</div></div><div class="station-card-end">' +
       '<button class="button button-quiet" data-public-map="' + html(station.map_id || station.osm_id) + '">Show on map</button>' +
       '<a class="button button-outline" href="' + html(stationPricingUrl(station)) + '" target="_blank" rel="noopener">Search tariff ↗</a>' +
-      '<a class="button button-outline" href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Reviews ↗</a>' +
-      '<a class="button button-outline" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(station.latitude + ',' + station.longitude) + '" target="_blank" rel="noopener">Directions ↗</a>' +
+      '<a class="button button-outline" href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Station reviews ↗</a>' +
+      '<a class="button button-outline" href="' + html(stationDirectionsUrl(station)) + '" target="_blank" rel="noopener">Directions ↗</a>' +
       '</div></article>';
   }).join('') : '<div class="empty-state">' + (stations.length ? 'No nearby stations list this connector in OpenStreetMap. Clear the connector filter or verify with a local operator.' : 'OpenStreetMap has no charger records in this area yet. That does not mean there are no real chargers here; coverage can be incomplete. Check the <a href="https://xprest.tatamotors.com/electric/chargingpoint" target="_blank" rel="noopener">Tata charging point directory ↗</a> or <a href="https://evyatra.beeindia.gov.in/" target="_blank" rel="noopener">BEE EV Yatra ↗</a>, and confirm details with the operator.') + '</div>';
   drawPublicMap(filtered, center, fit);
