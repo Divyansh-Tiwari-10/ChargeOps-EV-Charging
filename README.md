@@ -37,7 +37,7 @@ For the complete DBMS design rationale, normalization, ER model, and report/demo
 
 5. Open [http://localhost:3000](http://localhost:3000). The API health endpoint is `/api/health`.
 
-The seed script prints the demo password. Demo accounts are `maya@chargeops.test`, `arjun@chargeops.test`, `nila@chargeops.test`, `dev@chargeops.test`, `ops@chargeops.test`, and `admin@chargeops.test`; the seed password is `ChargeOps!2026` unless `DEMO_PASSWORD` is set before running the seed.
+The seed script prints the demo password. Demo accounts are `maya@chargeops.test`, `arjun@chargeops.test`, `nila@chargeops.test`, `dev@chargeops.test`, `ops@chargeops.test`, and `admin@chargeops.test`; the seed password is `ChargeOps!2026` unless `DEMO_PASSWORD` is set before running the seed. Running `npm run seed` also adds 20 clearly labeled simulated booking hubs across India. Their names, locations, and rates are for workflow demonstrations only, not real operators or current tariffs.
 
 Docker only runs initialization scripts the first time it creates its named data volume. If you edit the schema after the database has already initialized, apply the changed SQL manually or create a fresh development database. Do not delete a volume that contains data you need.
 

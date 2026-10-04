@@ -33,7 +33,7 @@
     </a>
     <nav id="mainNav" class="main-nav signed-in-only hidden" aria-label="Main navigation">
       <a class="nav-link active" href="#explore">Explore</a>
-      <a class="nav-link" href="#activity">My charging</a>
+      <a class="nav-link" id="historyNavLink" href="#activity">Charging history</a>
       <a class="nav-link operational-link hidden" href="#operations">Operations</a>
     </nav>
     <div class="top-actions">
@@ -111,7 +111,7 @@
             <button class="button button-primary search-submit" type="submit"><svg><use href="#i-search"/></svg> Find real stations</button>
           </form>
           <div class="quick-filters"><span>NEARBY SEARCH:</span><button type="button" data-filter-city="Kalyan, Maharashtra">Kalyan</button><button type="button" data-filter-city="Dombivli, Maharashtra">Dombivli</button><button type="button" data-filter-city="Thane, Maharashtra">Thane</button><button type="button" id="useMyLocation">◎ Use my location</button></div>
-          <div class="booking-path-card"><span class="booking-path-icon"><svg><use href="#i-bolt"/></svg></span><div><strong>Want to try a booking?</strong><p>Public stations are for discovery; operator booking isn’t connected. Try a simulated session with a ChargeOps sample station.</p></div><button id="showDemoBooking" class="button button-outline" type="button" aria-controls="demoNetwork">View sample stations <svg><use href="#i-arrow"/></svg></button></div>
+          <div class="booking-path-card"><span class="booking-path-icon"><svg><use href="#i-bolt"/></svg></span><div><strong>Want to try a booking?</strong><p>Public stations are for discovery; operator booking isn’t connected. Try a simulated session at a sample hub across India.</p></div><button id="showDemoBooking" class="button button-outline" type="button" aria-controls="demoNetwork">See India sample hubs <svg><use href="#i-arrow"/></svg></button></div>
           <div id="stationResults" class="station-results"><div class="empty-state">Loading stations from the network…</div></div>
         </div>
 
@@ -125,6 +125,16 @@
             <div class="map-legend"><span><i class="legend-dot available"></i>Public station record</span><span><i class="legend-dot busy"></i>Live availability unknown</span></div>
             <div class="map-attribution-note">Map & location data © OpenStreetMap contributors</div>
           </section>
+          <section class="panel garage-panel reveal" id="garage">
+            <div class="section-heading"><div><span class="eyebrow">YOUR GARAGE</span><h2>Your EVs<span class="heading-period">.</span></h2><p>We’ll match your car to a compatible booking port.</p></div><button id="toggleVehicleForm" class="button button-outline" type="button">＋ Add EV</button></div>
+            <div id="vehicleList" class="vehicle-list"></div>
+            <form id="vehicleForm" class="inline-form hidden">
+              <label>EV model<select name="modelId" required aria-label="Vehicle model"></select></label>
+              <label>Vehicle ID<input name="vin" required minlength="17" maxlength="17" placeholder="17-character VIN" aria-label="VIN"></label>
+              <label>Nickname<input name="nickname" placeholder="Optional name" aria-label="Nickname"></label>
+              <div class="form-actions"><button class="button button-quiet" type="button" id="cancelVehicle">Cancel</button><button class="button button-primary" type="submit">Add to garage <svg><use href="#i-arrow"/></svg></button></div>
+            </form>
+          </section>
           <section class="tip-card reveal" id="how-it-works">
             <div class="tip-orb"><svg><use href="#i-leaf"/></svg></div><div><span class="eyebrow">A BETTER WAY TO PLUG IN</span><p>Your reservation, session readings, and invoice stay linked from start to finish.</p><a href="#activity">See your charging activity <svg><use href="#i-arrow"/></svg></a></div>
           </section>
@@ -132,21 +142,11 @@
       </section>
 
       <details class="demo-network panel" id="demoNetwork">
-        <summary><span><b>Sample booking network</b><small>Simulated prices and reservations · not connected to public charging operators</small></span><span class="demo-chevron">＋</span></summary>
+        <summary><span><b>Pan-India sample booking network</b><small>Simulated locations, prices, and reservations · not connected to public charging operators</small></span><span class="demo-chevron">＋</span></summary>
         <div class="demo-station-list" id="demoStationResults"><div class="empty-state">Load the booking demo stations after signing in.</div></div>
       </details>
 
       <section class="lower-grid">
-        <section class="panel garage-panel reveal" id="garage">
-          <div class="section-heading"><div><span class="eyebrow">YOUR GARAGE</span><h2>Electric vehicles<span class="heading-period">.</span></h2><p>We’ll match your car to the right connector.</p></div><button id="toggleVehicleForm" class="button button-outline" type="button">＋ Add EV</button></div>
-          <div id="vehicleList" class="vehicle-list"></div>
-          <form id="vehicleForm" class="inline-form hidden">
-            <label>EV model<select name="modelId" required aria-label="Vehicle model"></select></label>
-            <label>Vehicle ID<input name="vin" required minlength="17" maxlength="17" placeholder="17-character VIN" aria-label="VIN"></label>
-            <label>Nickname<input name="nickname" placeholder="Optional name" aria-label="Nickname"></label>
-            <div class="form-actions"><button class="button button-quiet" type="button" id="cancelVehicle">Cancel</button><button class="button button-primary" type="submit">Add to garage <svg><use href="#i-arrow"/></svg></button></div>
-          </form>
-        </section>
         <section id="analyticsPanel" class="panel insight-panel reveal">
           <div class="section-heading"><div><span class="eyebrow">NETWORK PULSE</span><h2>Energy in motion<span class="heading-period">.</span></h2></div><span class="insight-icon"><svg><use href="#i-energy"/></svg></span></div>
           <p>Station energy rankings show where the network is working hardest.</p>
@@ -155,8 +155,8 @@
         </section>
       </section>
 
-      <section id="activity" class="panel activity-panel reveal">
-        <div class="section-heading activity-heading"><div><span class="eyebrow">YOUR ACTIVITY</span><h2>Bookings & sessions<span class="heading-period">.</span></h2><p>Your charging timeline, in one place.</p></div><button id="refreshBookings" class="icon-refresh" aria-label="Refresh activity">↻</button></div>
+      <section id="activity" class="panel activity-panel reveal hidden">
+        <div class="section-heading activity-heading"><div><span class="eyebrow">CHARGING HISTORY</span><h2>Bookings & sessions<span class="heading-period">.</span></h2><p>Your charging timeline, in one place.</p></div><button id="refreshBookings" class="icon-refresh" aria-label="Refresh activity">↻</button></div>
         <div class="activity-toolbar"><div class="activity-tabs" role="tablist"><button class="activity-tab active" data-activity-filter="all">All activity</button><button class="activity-tab" data-activity-filter="upcoming">Upcoming</button><button class="activity-tab" data-activity-filter="history">History</button></div><span id="activityCount" class="activity-count"></span></div>
         <div id="bookingResults" class="booking-list"><div class="empty-state">Loading your charging activity…</div></div>
       </section>

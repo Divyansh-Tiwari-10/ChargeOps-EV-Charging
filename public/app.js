@@ -409,7 +409,12 @@ $('#refreshMaintenance').addEventListener('click', () => loadMaintenance().catch
 $('#maintenanceResults').addEventListener('click', async e => { const button = e.target.closest('[data-action="resolve"]'); if (!button) return; try { await api(`/maintenance/${button.dataset.id}/resolve`,{method:'PATCH',body:'{}'}); toast('Maintenance ticket resolved.'); await Promise.all([loadMaintenance(),loadDemoStations()]); } catch(error) { toast(error.message,true); } });
 $('#logout').addEventListener('click', () => { state.token = null; state.user = null; localStorage.removeItem('chargeops_token'); showApp(); });
 $('#mobileMenu').addEventListener('click', () => { $('#mainNav').classList.toggle('open'); $('#mobileMenu').setAttribute('aria-expanded',$('#mainNav').classList.contains('open')); });
-$$('.nav-link').forEach(link => link.addEventListener('click', () => $('#mainNav').classList.remove('open')));
+if (location.hash === '#activity') $('#activity').classList.remove('hidden');
+$$('.nav-link').forEach(link => link.addEventListener('click', () => {
+  $('#mainNav').classList.remove('open');
+  if (link.getAttribute('href') !== '#activity') $('#activity').classList.add('hidden');
+}));
+$$('a[href="#activity"]').forEach(link => link.addEventListener('click', () => $('#activity').classList.remove('hidden')));
 
 setDateDefaults();
 showApp();

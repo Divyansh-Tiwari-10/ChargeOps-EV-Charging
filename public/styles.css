@@ -83,3 +83,53 @@
 .booking-path-card>.button{flex:0 0 auto;padding:9px 11px;font-size:8px;white-space:nowrap}
 .booking-path-card>.button svg{width:12px;height:12px}
 @media(max-width:520px){.booking-path-card{align-items:flex-start;flex-wrap:wrap;padding:12px}.booking-path-card>div{flex:1 1 calc(100% - 48px)}.booking-path-card>.button{margin-left:46px}}
+
+/* Readability and dashboard layout */
+.nav-link,.top-help{font-size:14px}
+.eyebrow{font-size:10px;letter-spacing:1.2px}
+.section-heading h2{font-size:24px;letter-spacing:-.7px}
+.section-heading p{font-size:13px;line-height:1.6;color:#5f6f64}
+.search-field>span:first-child{font-size:12px}
+.input-shell input,.input-shell select{font-size:15px}
+.button{font-size:13px}
+.quick-filters{gap:9px}
+.quick-filters>span{font-size:10px}
+.quick-filters button{font-size:12px;padding:9px 12px}
+.booking-path-card{gap:14px;padding:15px 16px}
+.booking-path-icon{width:40px;height:40px}
+.booking-path-card strong{font-size:14px}
+.booking-path-card p{font-size:12px;line-height:1.55}
+.booking-path-card>.button{font-size:12px;padding:11px 13px}
+.station-card h3{font-size:16px}
+.station-card p,.station-tags{font-size:12px;color:#5e6d62}
+.station-data-note{font-size:11px;color:#725f46;line-height:1.5}
+.station-card-end .button{font-size:12px;padding:10px 12px}
+.map-action{font-size:11px;padding:9px 11px}
+.map-overlay{font-size:12px}
+.map-legend{font-size:11px}
+.map-attribution-note,.network-map .leaflet-control-attribution{font-size:10px}
+.demo-network>summary b{font-size:16px}
+.demo-network>summary small{font-size:12px;line-height:1.5}
+.demo-station b{font-size:14px}
+.demo-station small{font-size:12px}
+.demo-station-meta{font-size:11px;line-height:1.45}
+.demo-station>.button{font-size:12px;padding:10px 12px}
+.garage-panel,.insight-panel{padding:22px}
+.garage-panel .section-heading{align-items:flex-start}
+.vehicle-item{padding:12px}
+.vehicle-item strong{font-size:14px}
+.vehicle-item small{font-size:12px}
+.vehicle-connectors{font-size:11px}
+.activity-panel .activity-count{font-size:11px}
+.activity-tab{font-size:12px;padding:9px 12px}
+.booking-row strong{font-size:14px}
+.booking-row small{font-size:12px;line-height:1.45}
+.booking-meta,.status-pill{font-size:10px}
+.booking-price{font-size:14px}
+.booking-actions .button{font-size:11px;padding:9px 11px}
+.empty-state{font-size:13px;line-height:1.55;color:#5f6f64}
+.network-map .leaflet-control-zoom a{font-size:18px}
+.activity-panel .section-heading{margin-bottom:18px}
+.activity-panel .section-heading h2{font-size:24px}
+@media(max-width:760px){.explore-side{grid-template-columns:1fr}.map-card{grid-row:auto}}
+@media(max-width:520px){.section-heading h2,.activity-panel .section-heading h2{font-size:21px}.section-heading p{font-size:12px}.search-field>span:first-child{font-size:12px}.quick-filters button{font-size:11px;padding:8px 10px}.booking-path-card{align-items:flex-start}.booking-path-card>.button{font-size:11px}.station-card h3{font-size:14px}.station-card p,.station-tags{font-size:11px}.station-data-note{font-size:10px}.station-card-end .button{font-size:11px}.demo-network>summary b{font-size:14px}.demo-network>summary small{font-size:11px}.demo-station b{font-size:13px}.demo-station small{font-size:11px}.demo-station-meta{font-size:10px}.activity-tab{font-size:11px;padding:8px 9px}.booking-row strong{font-size:13px}.booking-row small{font-size:11px}.booking-price{font-size:12px}.booking-actions .button{font-size:10px}}
