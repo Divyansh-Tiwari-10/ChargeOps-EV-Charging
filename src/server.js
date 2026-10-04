@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
@@ -19,10 +21,149 @@ const notFound = message => Object.assign(new Error(message), { status: 404 });
 const conflict = message => Object.assign(new Error(message), { status: 409 });
 const validDate = value => value && !Number.isNaN(new Date(value).getTime());
 const dateSql = value => new Date(value).toISOString().slice(0, 23).replace('T', ' ');
+const placeCache = new Map();
+const chargerCache = new Map();
+let geocodeQueue = Promise.resolve();
+let lastGeocodeRequestAt = 0;
+const beeDataset = JSON.parse(gunzipSync(readFileSync(path.join(here, '..', 'data', 'india-charging-stations.json.gz'))).toString('utf8'));
+const beeStations = beeDataset.stations;
+const distanceKm = (a, b) => {
+  const rad = n => n * Math.PI / 180;
+  const dLat = rad(b.latitude - a.latitude), dLng = rad(b.longitude - a.longitude);
+  const h = Math.sin(dLat/2)**2 + Math.cos(rad(a.latitude))*Math.cos(rad(b.latitude))*Math.sin(dLng/2)**2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
+};
+const cacheRead = (cache, key) => {
+  const hit = cache.get(key);
+  if (hit && hit.expiresAt > Date.now()) return hit.value;
+  if (hit) cache.delete(key);
+  return null;
+};
+const cacheWrite = (cache, key, value, ttlMs) => cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+
+async function geocodePlace(query) {
+  const key = query.trim().toLowerCase();
+  const cached = cacheRead(placeCache, key);
+  if (cached) return cached;
+  const task = geocodeQueue.then(async () => {
+    const remaining = 1100 - (Date.now() - lastGeocodeRequestAt);
+    if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+    lastGeocodeRequestAt = Date.now();
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    url.search = new URLSearchParams({ q: query, format: 'jsonv2', limit: '1', countrycodes: 'in' }).toString();
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'ChargeOpsStudentProject/1.0 (https://github.com/Divyansh-Tiwari-10/ChargeOps-EV-Charging)' },
+      signal: AbortSignal.timeout(12000)
+    });
+    if (!response.ok) throw Object.assign(new Error('Place search is temporarily unavailable. You can use your device location instead.'), { status: 503 });
+    const rows = await response.json();
+    if (!rows.length) throw notFound('Could not find that place. Try a nearby city or use your device location.');
+    const result = { latitude: Number(rows[0].lat), longitude: Number(rows[0].lon), display_name: rows[0].display_name };
+    cacheWrite(placeCache, key, result, 30 * 24 * 60 * 60 * 1000);
+    return result;
+  });
+  geocodeQueue = task.catch(() => {});
+  return task;
+}
 
 app.get('/api/health', asyncRoute(async (_req, res) => {
   const [rows] = await pool.query('SELECT 1 AS database_connected, UTC_TIMESTAMP(3) AS server_time');
   res.json({ status: 'ok', database: rows[0] });
+}));
+
+app.get('/api/map/geocode', asyncRoute(async (req, res) => {
+  const query = String(req.query.q || '').trim();
+  if (query.length < 2 || query.length > 120) throw badRequest('Enter a place name between 2 and 120 characters.');
+  res.set('Cache-Control', 'private, max-age=3600');
+  res.json({ place: await geocodePlace(query) });
+}));
+
+app.get('/api/map/public-chargers', asyncRoute(async (req, res) => {
+  const latitude = Number(req.query.latitude);
+  const longitude = Number(req.query.longitude);
+  const radius = Number(req.query.radius || 5000);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+      !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
+      !Number.isFinite(radius) || radius < 500 || radius > 10000) {
+    throw badRequest('Provide valid coordinates and a search radius between 500 m and 10 km.');
+  }
+  const cacheKey = [latitude.toFixed(3), longitude.toFixed(3), Math.round(radius / 500) * 500].join(',');
+  let result = cacheRead(chargerCache, cacheKey);
+  if (!result) {
+    const query = '[out:json][timeout:20];nwr(around:' + Math.round(radius) + ',' + latitude + ',' + longitude + ')[amenity=charging_station];out center tags;';
+    let payload = { elements: [] }, overpassUnavailable = false;
+    try {
+      const response = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'User-Agent': 'ChargeOpsStudentProject/1.0 (https://github.com/Divyansh-Tiwari-10/ChargeOps-EV-Charging)'
+        },
+        body: new URLSearchParams({ data: query }).toString(),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!response.ok) throw new Error('Overpass returned HTTP ' + response.status);
+      payload = await response.json();
+    } catch {
+      overpassUnavailable = true;
+    }
+    const elements = (payload?.elements || []).map(element => {
+      const tags = element.tags || {};
+      const point = element.type === 'node' ? element : element.center;
+      if (!point || !Number.isFinite(Number(point.lat)) || !Number.isFinite(Number(point.lon))) return null;
+      const sockets = Object.keys(tags).filter(key => key.startsWith('socket:') && !key.endsWith(':output') && !key.endsWith(':current'));
+      const connectorNames = [...new Set(sockets.map(key => {
+        const socket = key.slice(7);
+        if (socket === 'type2_combo' || socket === 'ccs') return 'CCS / CCS2';
+        if (socket === 'type2' || socket === 'type2_cable') return 'Type 2 AC';
+        if (socket === 'chademo') return 'CHAdeMO';
+        if (socket.startsWith('tesla')) return 'Tesla';
+        return socket.replaceAll('_', ' ');
+      }))];
+      const location = [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'], tags['addr:city'] || tags['addr:town']].filter(Boolean).join(', ');
+      return {
+        osm_id: element.type + '/' + element.id,
+        map_id: element.type + '/' + element.id,
+        source: 'OpenStreetMap',
+        source_label: 'OpenStreetMap community record',
+        source_url: 'https://www.openstreetmap.org/' + element.type + '/' + element.id,
+        source_date: null,
+        availability_note: 'Live availability and pricing are not provided by map data.',
+        name: tags.name || tags.operator || 'Public charging station',
+        operator: tags.operator || tags.network || null,
+        latitude: Number(point.lat),
+        longitude: Number(point.lon),
+        address: location || null,
+        connectors: connectorNames,
+        socket_details: sockets.map(key => key.slice(7).replaceAll('_', ' ') + (tags[key] ? ' × ' + tags[key] : '')),
+        power: tags.capacity || tags['capacity:charging'] || null,
+        opening_hours: tags.opening_hours || null,
+        access: tags.access || null,
+        fee: tags.fee || null,
+        status: tags.operational_status || tags.status || null,
+        website: tags.website || null,
+        osm_url: 'https://www.openstreetmap.org/' + element.type + '/' + element.id
+      };
+    }).filter(Boolean);
+    const officialSnapshot = beeStations.filter(station => distanceKm({ latitude, longitude }, station) <= radius / 1000);
+    if (overpassUnavailable && !officialSnapshot.length) throw Object.assign(new Error('The community charger map is busy. Try again shortly.'), { status: 503 });
+    const combined = [...elements];
+    for (const station of officialSnapshot) {
+      const duplicate = combined.find(mapped => distanceKm(mapped, station) < 0.08);
+      if (duplicate) {
+        duplicate.connectors = [...new Set([...duplicate.connectors, ...station.connectors])];
+        duplicate.connector_details = [...new Set([...(duplicate.connector_details || []), ...station.connector_details])];
+        duplicate.source_label += ' · BEE snapshot also lists this location';
+        duplicate.source_url = station.source_url;
+        duplicate.source_date = station.source_date;
+        duplicate.availability_note = station.availability_note;
+      } else combined.push(station);
+    }
+    result = { stations: combined, source_timestamp: payload?.osm3s?.timestamp_osm_base || null, snapshot_date:officialSnapshot.length ? beeDataset.source_date : null, national_dataset_count:beeDataset.station_count, overpass_unavailable:overpassUnavailable };
+    cacheWrite(chargerCache, cacheKey, result, 10 * 60 * 1000);
+  }
+  res.set('Cache-Control', 'private, max-age=300');
+  res.json({ ...result, center: { latitude, longitude }, radius_m: Math.round(radius), source: 'OpenStreetMap / Overpass and BEE public-station snapshot' });
 }));
 
 app.post('/api/auth/register', asyncRoute(async (req, res) => {

@@ -1,6 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const state = { token: localStorage.getItem('chargeops_token'), user: null, authMode: 'login', vehicles: [], models: [], stations: [], selectedStation: null, activityFilter: 'all', showAllStations: false };
+const state = { token: localStorage.getItem('chargeops_token'), user: null, authMode: 'login', vehicles: [], models: [], stations: [], demoStations: [], publicStations: [], mapRawStations: [], selectedStation: null, activityFilter: 'all', map: null, markers: null, mapCenter: { latitude: 19.2403, longitude: 73.1305 }, locationMarker: null, currentLocation: null, mapRequest: 0, placeRequest: 0, mapUnavailable: false };
 
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -36,11 +36,14 @@ function setAuthMode(mode) {
 
 async function showApp() {
   if (!state.token) {
-    $('#authPanel').classList.remove('hidden'); $('#appPanel').classList.add('hidden'); $('#logout').classList.add('hidden'); $('#whoami').classList.add('hidden'); return;
+    $('#authPanel').classList.remove('hidden'); $('#appPanel').classList.add('hidden');
+    $$('.signed-in-only').forEach(el => el.classList.add('hidden'));
+    $('#logout').classList.add('hidden'); $('#whoami').classList.add('hidden'); return;
   }
   try {
     const { user } = await api('/me'); state.user = user;
     $('#authPanel').classList.add('hidden'); $('#appPanel').classList.remove('hidden');
+    $$('.signed-in-only').forEach(el => el.classList.remove('hidden'));
     $('#logout').classList.remove('hidden'); $('#whoami').classList.remove('hidden');
     $('#userName').textContent = user.display_name; $('#userAvatar').textContent = user.display_name.trim().charAt(0).toUpperCase();
     $('#welcomeName').textContent = `${user.display_name.split(' ')[0]}.`;
@@ -51,23 +54,18 @@ async function showApp() {
     $('#operations').classList.toggle('hidden', !operational);
     $('#analyticsPanel').classList.toggle('hidden', !roles.some(role => ['STATION_OPERATOR','FINANCE','ADMIN'].includes(role)));
     const health = await api('/health'); $('#serverTime').textContent = `Updated ${localDateTime(health.database.server_time)}`;
-    await Promise.all([loadVehicles(), loadModels(), loadConnectors(), loadBookings(), searchStations()]);
+    await Promise.all([loadVehicles(), loadModels(), loadBookings(), loadDemoStations()]);
+    initializeMap();
+    setTimeout(() => state.map?.invalidateSize(), 100);
+    searchStations().catch(error => showMapMessage(error.message, true));
     if (operational) await loadMaintenance();
     if (!$('#analyticsPanel').classList.contains('hidden')) loadRanking().catch(() => {});
     initReveal();
   } catch (error) {
     if (error.message.includes('token') || error.message.includes('Unauthorized')) {
-      state.token = null; localStorage.removeItem('chargeops_token'); $('#authPanel').classList.remove('hidden'); $('#appPanel').classList.add('hidden');
+      state.token = null; localStorage.removeItem('chargeops_token'); $('#authPanel').classList.remove('hidden'); $('#appPanel').classList.add('hidden'); $$('.signed-in-only').forEach(el => el.classList.add('hidden')); $('#logout').classList.add('hidden'); $('#whoami').classList.add('hidden');
     } else toast(error.message, true);
   }
-}
-
-async function loadConnectors() {
-  const { stations } = await api('/stations');
-  const details = await Promise.all(stations.slice(0, 15).map(s => api(`/stations/${s.station_id}`)));
-  const names = [...new Set(details.flatMap(x => x.station.ports.flatMap(p => p.connectors)))].sort();
-  const select = $('[name="connector"]'), keep = select.value;
-  select.innerHTML = '<option value="">Any connector</option>' + names.map(n => `<option value="${html(n)}">${html(n)}</option>`).join(''); select.value = keep;
 }
 
 async function loadVehicles() {
@@ -109,37 +107,200 @@ async function loadBookings() {
   $('#bookingResults').innerHTML = filtered.length ? filtered.map(bookingCard).join('') : `<div class="empty-state">${state.activityFilter === 'upcoming' ? 'No upcoming reservations. Find a charger to plan your next stop.' : 'No charging records in this view yet.'}</div>`;
 }
 
-async function searchStations() {
-  const values = new FormData($('#searchForm')), params = new URLSearchParams();
-  if (values.get('city')) params.set('city', values.get('city'));
-  if (values.get('connector')) params.set('connector', values.get('connector'));
-  const from = inputIso(values.get('from')), to = inputIso(values.get('to'));
-  if (from && to) { params.set('from', from); params.set('to', to); }
-  const { stations } = await api(`/stations?${params}`); state.stations = stations;
-  $('#resultCount').textContent = `${stations.length} ${stations.length === 1 ? 'STATION' : 'STATIONS'}`;
-  const shown = state.showAllStations ? stations : stations.slice(0, 4);
-  $('#stationResults').innerHTML = stations.length ? shown.map((s,index) => `<article class="station-card" style="--item:${index}"><span class="station-index">${String(index+1).padStart(2,'0')}</span><div class="station-card-copy"><h3>${html(s.name)}</h3><p>${html(s.address)} · ${html(s.city)}</p><div class="station-tags"><span class="availability-tag ${Number(s.available_ports)>0?'':'busy'}"><i></i>${Number(s.available_ports || 0)} available</span><span>${Number(s.operational_ports || 0)} operational ports</span></div></div><div class="station-card-end"><span class="station-rate">${s.energy_rate_per_kwh ? `₹${Number(s.energy_rate_per_kwh).toFixed(0)}<small> / kWh</small>` : 'Live rate'}</span><button class="button button-quiet" data-action="ports" data-id="${s.station_id}" data-from="${html(from)}" data-to="${html(to)}">Reserve <svg><use href="#i-arrow"/></svg></button></div></article>`).join('') : '<div class="empty-state">No stations match those filters. Try another city or connector.</div>';
-  $('#showMoreStations').classList.toggle('hidden', stations.length <= 4);
-  $('#showMoreStations').innerHTML = state.showAllStations ? 'Show fewer stations <span>↑</span>' : `Show all ${stations.length} stations <span>↓</span>`;
-  drawMap(stations);
+async function loadDemoStations() {
+  const { stations } = await api('/stations');
+  state.demoStations = stations;
+  state.stations = stations;
+  $('#demoStationResults').innerHTML = stations.length ? stations.map(s => '<article class="demo-station"><span class="demo-station-pin"><svg><use href="#i-pin"/></svg></span><div><b>' + html(s.name) + '</b><small>' + html(s.address) + ' · ' + html(s.city) + '</small><span class="demo-station-meta">' + Number(s.available_ports || 0) + ' free sample ports · ' + (s.energy_rate_per_kwh ? '₹' + Number(s.energy_rate_per_kwh).toFixed(2) + '/kWh' : 'rate shown at billing') + '</span></div><button class="button button-quiet" data-action="ports" data-id="' + s.station_id + '">Try booking</button></article>').join('') : '<div class="empty-state">No sample stations are available.</div>';
 }
-function drawMap(stations) {
-  const root = $('#mapPins');
-  if (!stations.length) { root.innerHTML = ''; return; }
-  const latitudes = stations.map(s => Number(s.latitude)), longitudes = stations.map(s => Number(s.longitude));
-  const minLat = Math.min(...latitudes), maxLat = Math.max(...latitudes), minLng = Math.min(...longitudes), maxLng = Math.max(...longitudes);
-  root.innerHTML = stations.slice(0, 20).map((s,index) => {
-    const x = 12 + (maxLng === minLng ? index % 4 * 20 : (Number(s.longitude)-minLng)/(maxLng-minLng)*76);
-    const y = 18 + (maxLat === minLat ? Math.floor(index/4)*17 : (maxLat-Number(s.latitude))/(maxLat-minLat)*62);
-    return `<button class="map-pin ${Number(s.available_ports)>0?'has-availability':''}" style="left:${x}%;top:${y}%" data-action="ports" data-id="${s.station_id}" aria-label="Reserve at ${html(s.name)}"><svg><use href="#i-pin"/></svg><span>${index+1}</span></button>`;
-  }).join('');
+
+function showMapMessage(message, isError = false) {
+  const overlay = $('#mapLoading');
+  overlay.classList.add('visible');
+  overlay.classList.toggle('map-error', isError);
+  $('.map-spinner').classList.toggle('hidden', isError);
+  $('#mapStatus').textContent = message;
+}
+function hideMapMessage() {
+  $('#mapLoading').classList.remove('visible', 'map-error');
+  $('.map-spinner').classList.remove('hidden');
+}
+function initializeMap() {
+  if (state.map) return true;
+  if (!window.L) {
+    state.mapUnavailable = true;
+    showMapMessage('Interactive map library did not load. Charger results may still appear below.', true);
+    return false;
+  }
+  state.map = L.map('networkMap', { scrollWheelZoom: false }).setView([state.mapCenter.latitude, state.mapCenter.longitude], 12);
+  const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'
+  }).addTo(state.map);
+  tiles.on('tileerror', () => showMapMessage('Map tiles are temporarily unavailable. Try again later; station data may still load.', true));
+  state.markers = L.layerGroup().addTo(state.map);
+  return true;
+}
+
+function connectorMatches(station, selected) {
+  if (!selected) return true;
+  const values = station.connectors.join(' ').toLowerCase();
+  if (selected === 'CCS2') return values.includes('ccs');
+  if (selected === 'Type 2') return values.includes('type 2');
+  if (selected === 'CHAdeMO') return values.includes('chademo');
+  return values.includes(selected.toLowerCase());
+}
+function stationDistanceKm(a, b) {
+  const radians = value => value * Math.PI / 180;
+  const dLat = radians(b.latitude - a.latitude), dLng = radians(b.longitude - a.longitude);
+  const part = Math.sin(dLat / 2) ** 2 + Math.cos(radians(a.latitude)) * Math.cos(radians(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(part), Math.sqrt(1 - part));
+}
+function stationReviewsUrl(station) {
+  const query = [station.name, station.operator, station.address, station.city, station.state, station.latitude + ',' + station.longitude].filter(Boolean).join(' ');
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+}
+function stationPricingUrl(station) {
+  const query = [station.operator, station.name, station.address, station.city, station.state, 'EV charging tariff price per kWh'].filter(Boolean).join(' ');
+  return 'https://www.google.com/search?q=' + encodeURIComponent(query);
+}
+function publicMarkerBounds() {
+  return L.latLngBounds(state.markers.getLayers().map(marker => marker.getLatLng()));
+}
+function stationPopup(station) {
+  const destination = station.latitude + ',' + station.longitude;
+  return '<div class="charger-popup"><b>' + html(station.name) + '</b>' +
+    (station.operator ? '<span>' + html(station.operator) + '</span>' : '') +
+    '<small>' + html(station.address || 'Address not listed by source') + '</small>' +
+    '<small>' + html(station.connectors.join(' · ') || 'Connector details not mapped') + '</small>' +
+    '<em>' + html(station.availability_note || 'Current tariff and live availability are not provided by map data. Confirm both with the operator.') + '</em>' +
+    '<em>The current station price is not included in this map record.</em>' +
+    '<a href="' + html(stationPricingUrl(station)) + '" target="_blank" rel="noopener">Search operator tariff ↗</a>' +
+    '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '" target="_blank" rel="noopener">Get directions ↗</a>' +
+    '<a href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Find reviews on Google Maps ↗</a>' +
+    '<a href="' + html(station.source_url || station.osm_url || '#') + '" target="_blank" rel="noopener">' + html(station.source_label || 'View source record') + ' ↗</a></div>';
+}
+function drawPublicMap(stations, center, fit = false) {
+  initializeMap();
+  if (!state.map || !state.markers) return;
+  state.mapCenter = center;
+  state.markers.clearLayers();
+  stations.forEach(station => {
+    const marker = L.circleMarker([station.latitude, station.longitude], {
+      radius: 8, color: '#fff', weight: 2, fillColor: '#35795b', fillOpacity: .96
+    }).bindPopup(stationPopup(station), { maxWidth: 260 });
+    marker.addTo(state.markers);
+    marker.on('click', () => { const card = document.querySelector('[data-public-id="' + CSS.escape(station.map_id || station.osm_id) + '"]'); card?.classList.add('station-card-selected'); setTimeout(() => card?.classList.remove('station-card-selected'), 1000); });
+  });
+  if (state.locationMarker) state.locationMarker.remove();
+  if (state.currentLocation) {
+    state.locationMarker = L.circleMarker([state.currentLocation.latitude, state.currentLocation.longitude], { radius: 7, color:'#fff', weight:2, fillColor:'#3678cb', fillOpacity:1 })
+      .bindPopup('Your current location').addTo(state.map);
+  }
+  if (fit && stations.length > 1) state.map.fitBounds(publicMarkerBounds().pad(.16), { maxZoom: 15 });
+  else if (stations.length === 1) state.map.setView([stations[0].latitude, stations[0].longitude], 15);
+  else if (fit || !state.map.hasLayer(state.markers)) state.map.setView([center.latitude, center.longitude], 14);
+  else if (state.markers.getLayers().length === 0) state.map.setView([center.latitude, center.longitude], 14);
+  $('#mapZoomToResults').disabled = stations.length === 0;
+  setTimeout(() => state.map.invalidateSize(), 80);
+}
+function renderPublicStations(stations, center, fit = false) {
+  const connector = $('[name="connector"]').value;
+  const filtered = stations.filter(station => connectorMatches(station, connector))
+    .sort((a, b) => stationDistanceKm(center, a) - stationDistanceKm(center, b));
+  state.publicStations = filtered;
+  $('#resultCount').textContent = `${filtered.length} MAPPED`;
+  $('#stationResults').innerHTML = filtered.length ? filtered.map((station, index) => {
+    const km = stationDistanceKm(center, station);
+    const connectorDetails = station.connector_details || station.connectors;
+    const connectorSummary = connectorDetails.slice(0, 2).join(' · ') + (connectorDetails.length > 2 ? ' · +' + (connectorDetails.length - 2) + ' more' : '');
+    const facts = [connectorSummary || 'Connectors not mapped', station.power ? station.power + ' capacity' : 'Power not listed'];
+    return '<article class="station-card public-station-card" data-public-id="' + html(station.map_id || station.osm_id) + '" style="--item:' + index + '">' +
+      '<span class="station-index">' + String(index + 1).padStart(2, '0') + '</span><div class="station-card-copy"><h3>' + html(station.name) + '</h3>' +
+      '<p>' + html(station.operator || 'Operator not listed') + ' · ' + km.toFixed(1) + ' km away</p>' +
+      '<div class="station-tags"><span>' + html(facts[0]) + '</span><span>' + html(facts[1]) + '</span></div>' +
+      '<div class="station-data-note">' + html(station.source_label || 'Map record') + ' · tariff not provided; confirm price and availability with operator</div></div><div class="station-card-end">' +
+      '<button class="button button-quiet" data-public-map="' + html(station.map_id || station.osm_id) + '">Show on map</button>' +
+      '<a class="button button-outline" href="' + html(stationPricingUrl(station)) + '" target="_blank" rel="noopener">Search tariff ↗</a>' +
+      '<a class="button button-outline" href="' + html(stationReviewsUrl(station)) + '" target="_blank" rel="noopener">Reviews ↗</a>' +
+      '<a class="button button-outline" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(station.latitude + ',' + station.longitude) + '" target="_blank" rel="noopener">Directions ↗</a>' +
+      '</div></article>';
+  }).join('') : '<div class="empty-state">' + (stations.length ? 'No nearby stations list this connector in OpenStreetMap. Clear the connector filter or verify with a local operator.' : 'OpenStreetMap has no charger records in this area yet. That does not mean there are no real chargers here; coverage can be incomplete. Check the <a href="https://xprest.tatamotors.com/electric/chargingpoint" target="_blank" rel="noopener">Tata charging point directory ↗</a> or <a href="https://evyatra.beeindia.gov.in/" target="_blank" rel="noopener">BEE EV Yatra ↗</a>, and confirm details with the operator.') + '</div>';
+  drawPublicMap(filtered, center, fit);
+}
+async function loadPublicChargers(center, radius, options = {}) {
+  const requestId = ++state.mapRequest;
+  showMapMessage('Searching OpenStreetMap for mapped charging stations…');
+  try {
+    const params = new URLSearchParams({ latitude: center.latitude, longitude: center.longitude, radius: String(radius) });
+    const data = await api('/map/public-chargers?' + params);
+    if (requestId !== state.mapRequest) return;
+    state.mapCenter = center;
+    state.mapRawStations = data.stations || [];
+    renderPublicStations(data.stations || [], center, options.fit);
+    const updated = data.overpass_unavailable ? ' · Live OSM query unavailable' : data.source_timestamp ? ' · OSM updated ' + new Date(data.source_timestamp).toLocaleString() : '';
+    const snapshot = ' · BEE snapshot 26 Oct 2025 (' + Number(data.national_dataset_count || 0).toLocaleString() + ' sites nationwide)';
+    $('#mapStatus').textContent = (data.overpass_unavailable ? 'Showing archived records only: ' : '') + data.stations.length + ' public record' + (data.stations.length === 1 ? '' : 's') + ' within ' + (radius / 1000).toFixed(0) + ' km' + updated + snapshot + '. Prices and availability are not live.';
+    if (state.mapUnavailable) showMapMessage('Interactive map library did not load. Charger results are listed below.', true);
+    else hideMapMessage();
+  } catch (error) {
+    if (requestId !== state.mapRequest) return;
+    showMapMessage(error.message, true);
+    throw error;
+  }
+}
+async function searchStations() {
+  const query = $('[name="city"]').value.trim();
+  if (query.length < 2) throw new Error('Enter a place name with at least 2 characters.');
+  const radius = Number($('[name="radius"]').value) || 5000;
+  const placeRequest = ++state.placeRequest;
+  showMapMessage('Finding ' + query + '…');
+  const { place } = await api('/map/geocode?q=' + encodeURIComponent(query));
+  if (placeRequest !== state.placeRequest) return;
+  const center = { latitude: Number(place.latitude), longitude: Number(place.longitude) };
+  $('#mapStatus').textContent = 'Showing mapped public charger points near ' + query + '.';
+  if (state.map) state.map.setView([center.latitude, center.longitude], radius <= 3000 ? 15 : radius <= 5000 ? 14 : 13);
+  return loadPublicChargers(center, radius, { fit: true });
+}
+function loadMapArea() {
+  if (!state.map) return;
+  state.placeRequest++;
+  const center = state.map.getCenter();
+  const bounds = state.map.getBounds();
+  const northEast = bounds.getNorthEast();
+  const radius = Math.min(10000, Math.max(1000, Math.round(stationDistanceKm({ latitude:center.lat, longitude:center.lng }, { latitude:northEast.lat, longitude:northEast.lng }) * 1000)));
+  return loadPublicChargers({ latitude:center.lat, longitude:center.lng }, radius, { fit:false });
+}
+function searchMyLocation() {
+  const button = $('#useMyLocation');
+  if (!navigator.geolocation) { toast('This browser does not support location access.', true); return; }
+  if (button.disabled) return;
+  state.placeRequest++;
+  button.disabled = true;
+  button.textContent = 'Getting location…';
+  showMapMessage('Allow location access in your browser prompt to find nearby chargers…');
+  navigator.geolocation.getCurrentPosition(position => {
+    const center = { latitude:position.coords.latitude, longitude:position.coords.longitude };
+    state.currentLocation = center;
+    state.map?.setView([center.latitude, center.longitude], 14);
+    const accuracy = Math.round(position.coords.accuracy);
+    showMapMessage('Location found (about ' + accuracy + ' m accuracy). Searching nearby stations…');
+    loadPublicChargers(center, Number($('[name="radius"]').value) || 5000, { fit:true })
+      .catch(error => toast(error.message, true))
+      .finally(() => { button.disabled = false; button.textContent = '◎ Use my location'; });
+  }, error => {
+    const messages = { 1:'Location access was denied. Allow it in your browser settings, or search for a place by name.', 2:'Your location is unavailable. Try searching for a place by name.', 3:'Location request timed out. Try again or search for a place by name.' };
+    showMapMessage(messages[error.code] || 'Could not read your location.', true);
+    button.disabled = false;
+    button.textContent = '◎ Use my location';
+  }, { enableHighAccuracy:true, timeout:20000, maximumAge:60000 });
 }
 
 async function openBooking(stationId, from = '', to = '') {
   if (!state.vehicles.length) { toast('Add an EV to your garage first.', true); $('#vehicleForm').classList.remove('hidden'); $('#garage').scrollIntoView({behavior:'smooth'}); return; }
   const { station } = await api(`/stations/${stationId}`); state.selectedStation = station;
   $('#bookingStationSummary').innerHTML = `<span class="summary-pin"><svg><use href="#i-pin"/></svg></span><div><strong>${html(station.name)}</strong><small>${html(station.address)} · ${html(station.city)}</small></div>`;
-  $('#bookingRate').textContent = station.energy_rate_per_kwh ? `₹${Number(station.energy_rate_per_kwh).toFixed(2)} / kWh${Number(station.session_fee)>0?` · ₹${Number(station.session_fee).toFixed(0)} session fee`:''}` : 'Rate shown on final invoice';
+  $('#bookingRate').textContent = station.energy_rate_per_kwh ? `Demo ₹${Number(station.energy_rate_per_kwh).toFixed(2)} / kWh${Number(station.session_fee)>0?` · ₹${Number(station.session_fee).toFixed(0)} sample session fee`:''}` : 'Demo rate shown on final invoice';
   setDateDefaults(from || null, to || null); $('#bookingMessage').textContent = ''; $('#bookingPort').innerHTML = '<option value="">Checking available ports…</option>';
   $('#bookingDialog').showModal(); await refreshAvailablePorts();
 }
@@ -207,17 +368,31 @@ function initReveal() {
 
 $('.segmented').addEventListener('click', e => { const button = e.target.closest('[data-auth-mode]'); if (button) setAuthMode(button.dataset.authMode); });
 $('#authForm').addEventListener('submit', handleAuth);
-$('#searchForm').addEventListener('submit', async e => { e.preventDefault(); state.showAllStations = false; try { await searchStations(); } catch (error) { toast(error.message,true); } });
-$('.quick-filters').addEventListener('click', e => { const button = e.target.closest('[data-filter-connector],[data-filter-city]'); if (!button) return; if (button.dataset.filterConnector) $('[name="connector"]').value = button.dataset.filterConnector; if (button.dataset.filterCity) $('[name="city"]').value = button.dataset.filterCity; $('#searchForm').requestSubmit(); });
-$('#stationResults').addEventListener('click', e => { const button = e.target.closest('[data-action="ports"]'); if (button) handleBookingAction(button).catch(error => toast(error.message,true)); });
-$('#mapPins').addEventListener('click', e => { const button = e.target.closest('[data-action="ports"]'); if (button) handleBookingAction(button).catch(error => toast(error.message,true)); });
-$('#showMoreStations').addEventListener('click', () => { state.showAllStations = !state.showAllStations; searchStations().catch(error => toast(error.message,true)); });
+$('#searchForm').addEventListener('submit', async e => { e.preventDefault(); try { await searchStations(); } catch (error) { showMapMessage(error.message, true); } });
+$('.quick-filters').addEventListener('click', e => { const button = e.target.closest('[data-filter-city]'); if (!button) return; $('[name="city"]').value = button.dataset.filterCity; $('#searchForm').requestSubmit(); });
+$('#stationResults').addEventListener('click', e => {
+  const button = e.target.closest('[data-public-map]');
+  if (button) {
+    const station = state.publicStations.find(item => (item.map_id || item.osm_id) === button.dataset.publicMap);
+    const marker = state.markers?.getLayers().find(item => item.getLatLng().lat === station?.latitude && item.getLatLng().lng === station?.longitude);
+    if (station && marker) { state.map.panTo(marker.getLatLng()); marker.openPopup(); }
+  }
+});
+$('#demoStationResults').addEventListener('click', e => { const button = e.target.closest('[data-action="ports"]'); if (button) handleBookingAction(button).catch(error => toast(error.message,true)); });
+$('#searchMapArea').addEventListener('click', () => loadMapArea()?.catch(error => toast(error.message,true)));
+$('#mapZoomToResults').addEventListener('click', () => {
+  if (state.markers?.getLayers().length > 1) state.map.fitBounds(publicMarkerBounds().pad(.16), { maxZoom:15 });
+  else if (state.markers?.getLayers().length === 1) state.map.setView(state.markers.getLayers()[0].getLatLng(), 15);
+});
+$('#useMyLocation').addEventListener('click', searchMyLocation);
+$('[name="connector"]').addEventListener('change', () => renderPublicStations(state.mapRawStations, state.mapCenter, false));
+$('[name="radius"]').addEventListener('change', () => searchStations().catch(error => showMapMessage(error.message, true)));
 $('#vehicleForm').addEventListener('submit', e => addVehicle(e).catch(error => toast(error.message,true)));
 $('#toggleVehicleForm').addEventListener('click', () => { $('#vehicleForm').classList.toggle('hidden'); if (!$('#vehicleForm').classList.contains('hidden')) $('[name="vin"]').focus(); });
 $('#cancelVehicle').addEventListener('click', () => $('#vehicleForm').classList.add('hidden'));
 $('#bookingResults').addEventListener('click', e => { const button = e.target.closest('[data-action]'); if (button) handleBookingAction(button).catch(error => toast(error.message,true)); });
 $('.activity-tabs').addEventListener('click', e => { const button = e.target.closest('[data-activity-filter]'); if (!button) return; state.activityFilter = button.dataset.activityFilter; $$('.activity-tab').forEach(tab => tab.classList.toggle('active', tab === button)); loadBookings().catch(error => toast(error.message,true)); });
-$('#bookingForm').addEventListener('submit', async e => { e.preventDefault(); const button = $('#reserveButton'); button.disabled = true; try { const values = Object.fromEntries(new FormData(e.currentTarget)); const result = await api('/bookings', { method:'POST', body:JSON.stringify({ vehicleId:Number(values.vehicleId),portId:Number(values.portId),startAt:inputIso(values.startAt),endAt:inputIso(values.endAt) }) }); $('#bookingDialog').close(); toast(`Reserved. Booking #${result.booking_id}`); await Promise.all([loadBookings(),searchStations()]); } catch(error) { $('#bookingMessage').textContent = error.message; } finally { button.disabled = false; } });
+$('#bookingForm').addEventListener('submit', async e => { e.preventDefault(); const button = $('#reserveButton'); button.disabled = true; try { const values = Object.fromEntries(new FormData(e.currentTarget)); const result = await api('/bookings', { method:'POST', body:JSON.stringify({ vehicleId:Number(values.vehicleId),portId:Number(values.portId),startAt:inputIso(values.startAt),endAt:inputIso(values.endAt) }) }); $('#bookingDialog').close(); toast(`Reserved. Booking #${result.booking_id}`); await Promise.all([loadBookings(),loadDemoStations()]); } catch(error) { $('#bookingMessage').textContent = error.message; } finally { button.disabled = false; } });
 ['#bookingVehicle','#bookingFrom','#bookingTo'].forEach(selector => $(selector).addEventListener('change', () => refreshAvailablePorts().catch(error => { $('#portHint').textContent = error.message; })));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => $(`#${button.dataset.closeDialog}`).close()));
 [$('#bookingDialog'),$('#faultDialog')].forEach(dialog => dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); }));
@@ -226,7 +401,7 @@ $('#faultForm').addEventListener('submit', async e => { e.preventDefault(); try 
 $('#loadRanking').addEventListener('click', () => loadRanking().catch(error => toast(error.message,true)));
 $('#refreshBookings').addEventListener('click', () => loadBookings().catch(error => toast(error.message,true)));
 $('#refreshMaintenance').addEventListener('click', () => loadMaintenance().catch(error => toast(error.message,true)));
-$('#maintenanceResults').addEventListener('click', async e => { const button = e.target.closest('[data-action="resolve"]'); if (!button) return; try { await api(`/maintenance/${button.dataset.id}/resolve`,{method:'PATCH',body:'{}'}); toast('Maintenance ticket resolved.'); await Promise.all([loadMaintenance(),searchStations()]); } catch(error) { toast(error.message,true); } });
+$('#maintenanceResults').addEventListener('click', async e => { const button = e.target.closest('[data-action="resolve"]'); if (!button) return; try { await api(`/maintenance/${button.dataset.id}/resolve`,{method:'PATCH',body:'{}'}); toast('Maintenance ticket resolved.'); await Promise.all([loadMaintenance(),loadDemoStations()]); } catch(error) { toast(error.message,true); } });
 $('#logout').addEventListener('click', () => { state.token = null; state.user = null; localStorage.removeItem('chargeops_token'); showApp(); });
 $('#mobileMenu').addEventListener('click', () => { $('#mainNav').classList.toggle('open'); $('#mobileMenu').setAttribute('aria-expanded',$('#mainNav').classList.contains('open')); });
 $$('.nav-link').forEach(link => link.addEventListener('click', () => $('#mainNav').classList.remove('open')));

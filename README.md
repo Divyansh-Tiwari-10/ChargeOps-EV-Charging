@@ -56,13 +56,19 @@ Docker only runs initialization scripts the first time it creates its named data
 | Area | Endpoints |
 |---|---|
 | Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me` |
-| Network | `GET /api/stations`, `GET /api/stations/:id`, `GET /api/ports/:id/availability` |
+| Network | `GET /api/stations`, `GET /api/stations/:id`, `GET /api/ports/:id/availability`, `GET /api/map/geocode?q=`, `GET /api/map/public-chargers?latitude=&longitude=&radius=` |
 | EVs | `GET /api/vehicle-models`, `GET /api/vehicles`, `POST /api/vehicles` |
 | Booking | `GET /api/bookings`, `POST /api/bookings`, `DELETE /api/bookings/:id` |
 | Sessions | `POST /api/sessions`, `POST /api/sessions/:id/meter-readings`, `POST /api/sessions/:id/complete` |
 | Payments | `POST /api/invoices/:id/payments` |
 | Maintenance | `POST /api/ports/:id/maintenance`, `GET /api/maintenance`, `PATCH /api/maintenance/:id/resolve` |
 | Analytics | `GET /api/analytics/energy?from=&to=`, `GET /api/analytics/station-ranking` |
+
+## India public-charger map data
+
+The map combines live OpenStreetMap/Overpass search results with **28,526** geocoded entries bundled from BEE's public charging-station list, published through 26 October 2025. The compressed snapshot is `data/india-charging-stations.json.gz`; the server filters it to the requested place and radius. Record detail, working status, price, and review count can change after publication. Each station card links to a Google Maps search for current location details and user reviews; this project does not copy reviews or ratings into its own database.
+
+To refresh the bundled BEE snapshot later, download the latest PDF from [BEE's public charging-station data page](https://www.beeindia.gov.in/show_content.php?lang=1&level=2&lid=67&ls_id=345) as `data/bee-public-chargers.pdf`, install Python and `pdfplumber` (`python -m pip install pdfplumber`), then run `python scripts/import-bee-pcs.py` and `python scripts/compact-bee-pcs.py` from the project folder. These steps replace the compressed JSON used by the map. The PDF and intermediate extracted JSON are ignored by Git.
 
 ## Database scripts
 
@@ -75,4 +81,8 @@ Use UTC for stored `DATETIME(3)` values. The frontend converts browser-local boo
 
 ## Current implementation boundaries
 
-This first build is focused on a coherent end-to-end student demo. It has account roles enforced by the API and database constraints, but MySQL grants for separately deployed customer accounts are not configured. Network search uses city/connector filters rather than geospatial radius. Tariff billing applies energy and session fees; idle fees, tax rules, refunds, provider integration, and real-time charger hardware are not implemented. Port utilization definitions and larger graph/path optimization can be added after the workflows are stable.
+This is a student demo, not a live charging operator. The booking workflow uses synthetic stations in the project database, and bookings do not reserve real public chargers. Search any Indian place to browse the nationwide BEE snapshot plus nearby OpenStreetMap/Overpass community records; Nominatim provides place search. BEE says its downloadable national list covers stations through 26 October 2025, so records may have since closed or changed. OSM coverage can also be incomplete. Neither source confirms a charger's current working state, live availability, or price. Public map records therefore show no quoted amount and link to a web search for the operator's tariff. The booking demo's seeded rates are fictional examples. The Ministry of Power guidelines describe components of public charging fees and ceilings for service charges; these are not a station's complete payable price. Confirm total rate, taxes, time-based charges, parking, and session fees with the operator before charging. Each public map entry links to Google Maps search for current details, photos, and reviews; the app does not claim review coverage is complete and does not copy or verify review text or ratings. OpenStreetMap's public tile service is best-effort and follows its [tile usage policy](https://operations.osmfoundation.org/policies/tiles/); this demo caches geocoding and charger searches in memory to reduce repeat requests.
+
+Government charging guidance gives maximum service-fee components, not each station's total payable tariff; final charges also depend on electricity tariff, time band, land costs, taxes, and operator fees. See the [Ministry of Power's 2024 guidelines](https://powermin.gov.in/sites/default/files/Guidelines_and_Standards_for_EVCI_dated_17_09_2024.pdf) and verify a station's live price with its operator.
+
+Other implementation boundaries: account roles are enforced by the API and database constraints, but MySQL grants for separately deployed customer accounts are not configured. Tariff billing applies energy and session fees; idle fees, tax rules, refunds, provider integration, and real-time charger hardware are not implemented. Port utilization definitions and larger graph/path optimization can be added after the workflows are stable.

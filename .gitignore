@@ -1,4 +1,7 @@
 node_modules/
 .env
+data/bee-public-chargers.pdf
+data/bee-public-chargers.txt
+data/bee-public-chargers.json
 npm-debug.log*
 .DS_Store

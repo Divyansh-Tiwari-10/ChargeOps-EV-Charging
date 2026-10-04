@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -30,16 +31,16 @@
       <span class="brand-mark"><svg><use href="#i-bolt"/></svg></span>
       <span class="brand-word">chargeops<span class="brand-dot">.</span><small>CHARGING NETWORK</small></span>
     </a>
-    <nav id="mainNav" class="main-nav" aria-label="Main navigation">
+    <nav id="mainNav" class="main-nav signed-in-only hidden" aria-label="Main navigation">
       <a class="nav-link active" href="#explore">Explore</a>
       <a class="nav-link" href="#activity">My charging</a>
       <a class="nav-link operational-link hidden" href="#operations">Operations</a>
     </nav>
     <div class="top-actions">
-      <a class="top-help" href="#how-it-works">How it works</a>
+      <a class="top-help signed-in-only hidden" href="#how-it-works">How it works</a>
       <span id="whoami" class="user-chip hidden"><span class="user-avatar" id="userAvatar">D</span><span id="userName"></span></span>
       <button id="logout" class="button button-quiet hidden">Sign out</button>
-      <button id="mobileMenu" class="icon-button mobile-menu" aria-label="Open menu"><svg><use href="#i-menu"/></svg></button>
+      <button id="mobileMenu" class="icon-button mobile-menu signed-in-only hidden" aria-label="Open menu"><svg><use href="#i-menu"/></svg></button>
     </div>
   </header>
 
@@ -100,36 +101,39 @@
       <section class="explore-layout">
         <div class="explore-main panel reveal">
           <div class="section-heading">
-            <div><span class="eyebrow">FIND YOUR NEXT STOP</span><h2>Chargers around you<span class="heading-period">.</span></h2><p>Choose a station and we’ll find a port that fits your EV.</p></div>
-            <span class="result-count" id="resultCount">NETWORK</span>
+            <div><span class="eyebrow">PUBLIC STATION DATA · OSM + BEE</span><h2>Chargers around you<span class="heading-period">.</span></h2><p>Nearby public records from OpenStreetMap and BEE. Verify connector, hours, price, and availability with the charging operator.</p></div>
+            <span class="result-count" id="resultCount">LIVE MAP</span>
           </div>
           <form id="searchForm" class="search-form">
-            <label class="search-field"><span>City</span><span class="input-shell"><svg><use href="#i-pin"/></svg><input name="city" placeholder="Search a city" value="Pune"></span></label>
-            <label class="search-field"><span>Connector</span><span class="input-shell"><svg><use href="#i-bolt"/></svg><select name="connector"><option value="">Any connector</option></select></span></label>
-            <label class="search-field"><span>Arrive from</span><span class="input-shell"><svg><use href="#i-clock"/></svg><input name="from" type="datetime-local"></span></label>
-            <label class="search-field"><span>Until</span><span class="input-shell"><svg><use href="#i-clock"/></svg><input name="to" type="datetime-local"></span></label>
-            <button class="button button-primary search-submit" type="submit"><svg><use href="#i-search"/></svg> Search stations</button>
+            <label class="search-field location-field"><span>Area or place</span><span class="input-shell"><svg><use href="#i-pin"/></svg><input name="city" placeholder="Search an area e.g. Kalyan, Maharashtra" value="Kalyan, Maharashtra" autocomplete="off"></span></label>
+            <label class="search-field"><span>Connector (if mapped)</span><span class="input-shell"><svg><use href="#i-bolt"/></svg><select name="connector"><option value="">Any connector</option><option value="CCS2">CCS / CCS2</option><option value="Type 2">Type 2 AC</option><option value="CHAdeMO">CHAdeMO</option></select></span></label>
+            <label class="search-field"><span>Search radius</span><span class="input-shell"><svg><use href="#i-search"/></svg><select name="radius"><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option></select></span></label>
+            <button class="button button-primary search-submit" type="submit"><svg><use href="#i-search"/></svg> Find real stations</button>
           </form>
-          <div class="quick-filters"><span>POPULAR:</span><button type="button" data-filter-connector="CCS2">CCS2 fast charge</button><button type="button" data-filter-connector="Type2">Type 2</button><button type="button" data-filter-city="Mumbai">Mumbai</button></div>
+          <div class="quick-filters"><span>NEARBY SEARCH:</span><button type="button" data-filter-city="Kalyan, Maharashtra">Kalyan</button><button type="button" data-filter-city="Dombivli, Maharashtra">Dombivli</button><button type="button" data-filter-city="Thane, Maharashtra">Thane</button><button type="button" id="useMyLocation">◎ Use my location</button></div>
           <div id="stationResults" class="station-results"><div class="empty-state">Loading stations from the network…</div></div>
-          <button id="showMoreStations" class="show-more hidden" type="button">Show all stations <span>↓</span></button>
         </div>
 
         <aside class="explore-side">
           <section class="map-card panel reveal">
-            <div class="map-head"><span class="eyebrow">NETWORK MAP</span><span class="map-live"><i></i> LIVE</span></div>
-            <div id="networkMap" class="network-map" aria-label="Schematic map of stations">
-              <svg class="map-lines" viewBox="0 0 400 260" preserveAspectRatio="none" aria-hidden="true"><path d="M32 199 112 147 174 174 236 92 309 117 371 48"/><path d="M112 147 136 54 236 92 274 214 371 48"/><path d="M32 199 96 224 174 174 274 214"/></svg>
-              <div class="map-label label-north">NORTH LOOP</div><div class="map-label label-east">EAST LINK</div><div class="map-label label-south">SOUTH ROUTE</div>
-              <div id="mapPins" class="map-pins"></div><div class="map-compass">N <span>↑</span></div>
+            <div class="map-head"><span class="eyebrow">REAL-WORLD MAP</span><span class="map-live"><i></i> OPEN DATA</span></div>
+            <div class="map-controls"><button id="searchMapArea" type="button" class="map-action">Search this map area</button><button id="mapZoomToResults" type="button" class="map-action" disabled>Fit stations</button></div>
+            <div id="networkMap" class="network-map" aria-label="Interactive map showing mapped public EV charging stations">
+              <div id="mapLoading" class="map-overlay"><span class="map-spinner"></span><span id="mapStatus">Search a place to load nearby chargers.</span></div>
             </div>
-            <div class="map-legend"><span><i class="legend-dot available"></i>Ports available</span><span><i class="legend-dot busy"></i>Busy / offline</span></div>
+            <div class="map-legend"><span><i class="legend-dot available"></i>Public station record</span><span><i class="legend-dot busy"></i>Live availability unknown</span></div>
+            <div class="map-attribution-note">Map & location data © OpenStreetMap contributors</div>
           </section>
           <section class="tip-card reveal" id="how-it-works">
             <div class="tip-orb"><svg><use href="#i-leaf"/></svg></div><div><span class="eyebrow">A BETTER WAY TO PLUG IN</span><p>Your reservation, session readings, and invoice stay linked from start to finish.</p><a href="#activity">See your charging activity <svg><use href="#i-arrow"/></svg></a></div>
           </section>
         </aside>
       </section>
+
+      <details class="demo-network panel" id="demoNetwork">
+        <summary><span><b>Try the booking workflow</b><small>ChargeOps sample stations · demo prices only, not current operator tariffs · reservations are not public operator bookings</small></span><span class="demo-chevron">＋</span></summary>
+        <div class="demo-station-list" id="demoStationResults"><div class="empty-state">Load the booking demo stations after signing in.</div></div>
+      </details>
 
       <section class="lower-grid">
         <section class="panel garage-panel reveal" id="garage">
@@ -171,7 +175,7 @@
       <label>Your electric vehicle<select id="bookingVehicle" name="vehicleId" required></select></label>
       <label>Available port<select id="bookingPort" name="portId" required><option value="">Choose a port</option></select><small id="portHint" class="field-hint">Port options update to match your EV and time.</small></label>
       <div class="dialog-time-grid"><label>From<input id="bookingFrom" name="startAt" type="datetime-local" required></label><label>Until<input id="bookingTo" name="endAt" type="datetime-local" required></label></div>
-      <div id="bookingEstimate" class="booking-estimate"><span>Estimated station rate</span><strong id="bookingRate">Select a station</strong></div>
+      <div id="bookingEstimate" class="booking-estimate"><span>Sample database rate</span><strong id="bookingRate">Select a station</strong></div>
       <p id="bookingMessage" class="form-message" aria-live="polite"></p>
       <div class="dialog-actions"><button type="button" class="button button-quiet" data-close-dialog="bookingDialog">Not now</button><button class="button button-primary" type="submit" id="reserveButton">Confirm reservation <svg><use href="#i-arrow"/></svg></button></div>
     </form>
@@ -190,6 +194,7 @@
   </dialog>
 
   <footer><a class="footer-brand" href="#top">chargeops<span>.</span></a><span>Database first. Every session accounted for.</span><button id="reportIssue" class="footer-report hidden" type="button">Report a port issue</button><span class="footer-tag">DEMO BUILD · 2026</span></footer>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="/app.js" type="module"></script>
 </body>
 </html>
