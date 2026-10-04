@@ -239,6 +239,22 @@ function renderPublicStations(stations, center, fit = false) {
   }).join('') : '<div class="empty-state">' + (stations.length ? 'No nearby stations list this connector in OpenStreetMap. Clear the connector filter or verify with a local operator.' : 'OpenStreetMap has no charger records in this area yet. That does not mean there are no real chargers here; coverage can be incomplete. Check the <a href="https://xprest.tatamotors.com/electric/chargingpoint" target="_blank" rel="noopener">Tata charging point directory ↗</a> or <a href="https://evyatra.beeindia.gov.in/" target="_blank" rel="noopener">BEE EV Yatra ↗</a>, and confirm details with the operator.') + '</div>';
   drawPublicMap(filtered, center, fit);
 }
+function setStationSearchLoading(query) {
+  $('.search-submit').disabled = true;
+  $('.search-submit').innerHTML = '<span class="search-button-spinner" aria-hidden="true"></span> Searching…';
+  $('#resultCount').textContent = 'SEARCHING';
+  $('#stationResults').setAttribute('aria-busy', 'true');
+  $('#stationResults').innerHTML = '<div class="station-loading" role="status"><span class="station-loading-spinner" aria-hidden="true"></span><span>Searching public EV stations near <b>' + html(query) + '</b>…</span></div><div class="station-skeleton" aria-hidden="true"><i></i><i></i><i></i></div>';
+}
+function setStationSearchFinished() {
+  $('.search-submit').disabled = false;
+  $('.search-submit').innerHTML = '<svg><use href="#i-search"/></svg> Find real stations';
+  $('#stationResults').removeAttribute('aria-busy');
+}
+function setStationSearchError(error) {
+  $('#resultCount').textContent = 'SEARCH FAILED';
+  $('#stationResults').innerHTML = '<div class="empty-state station-search-error" role="alert">Could not load stations for this location. ' + html(error.message || 'Please try again.') + ' Check the place name and try again.</div>';
+}
 async function loadPublicChargers(center, radius, options = {}) {
   const requestId = ++state.mapRequest;
   showMapMessage('Searching OpenStreetMap for mapped charging stations…');
@@ -265,13 +281,22 @@ async function searchStations() {
   if (query.length < 2) throw new Error('Enter a place name with at least 2 characters.');
   const radius = Number($('[name="radius"]').value) || 5000;
   const placeRequest = ++state.placeRequest;
+  setStationSearchLoading(query);
   showMapMessage('Finding ' + query + '…');
-  const { place } = await api('/map/geocode?q=' + encodeURIComponent(query));
-  if (placeRequest !== state.placeRequest) return;
-  const center = { latitude: Number(place.latitude), longitude: Number(place.longitude) };
-  $('#mapStatus').textContent = 'Showing mapped public charger points near ' + query + '.';
-  if (state.map) state.map.setView([center.latitude, center.longitude], radius <= 3000 ? 15 : radius <= 5000 ? 14 : 13);
-  return loadPublicChargers(center, radius, { fit: true });
+  try {
+    const { place } = await api('/map/geocode?q=' + encodeURIComponent(query));
+    if (placeRequest !== state.placeRequest) return;
+    const center = { latitude: Number(place.latitude), longitude: Number(place.longitude) };
+    $('#mapStatus').textContent = 'Showing mapped public charger points near ' + query + '.';
+    if (state.map) state.map.setView([center.latitude, center.longitude], radius <= 3000 ? 15 : radius <= 5000 ? 14 : 13);
+    await loadPublicChargers(center, radius, { fit: true });
+  } catch (error) {
+    if (placeRequest !== state.placeRequest) return;
+    setStationSearchError(error);
+    throw error;
+  } finally {
+    if (placeRequest === state.placeRequest) setStationSearchFinished();
+  }
 }
 function loadMapArea() {
   if (!state.map) return;
@@ -385,8 +410,29 @@ function initReveal() {
 
 $('.segmented').addEventListener('click', e => { const button = e.target.closest('[data-auth-mode]'); if (button) setAuthMode(button.dataset.authMode); });
 $('#authForm').addEventListener('submit', handleAuth);
-$('#searchForm').addEventListener('submit', async e => { e.preventDefault(); try { await searchStations(); } catch (error) { showMapMessage(error.message, true); } });
-$('.quick-filters').addEventListener('click', e => { const button = e.target.closest('[data-filter-city]'); if (!button) return; $('[name="city"]').value = button.dataset.filterCity; $('#searchForm').requestSubmit(); });
+let placeSearchTimer;
+$('#searchForm').addEventListener('submit', async e => { e.preventDefault(); clearTimeout(placeSearchTimer); try { await searchStations(); } catch (error) { showMapMessage(error.message, true); } });
+$('[name="city"]').addEventListener('input', e => {
+  clearTimeout(placeSearchTimer);
+  const query = e.currentTarget.value.trim();
+  state.placeRequest++;
+  state.mapRequest++;
+  if (query.length < 2) {
+    setStationSearchFinished();
+    $('#resultCount').textContent = 'ENTER LOCATION';
+    $('#stationResults').innerHTML = '<div class="empty-state">Enter at least 2 characters to search for charging stations.</div>';
+    hideMapMessage();
+    return;
+  }
+  setStationSearchLoading(query);
+  showMapMessage('Preparing to search near ' + query + '…');
+  placeSearchTimer = setTimeout(() => {
+    if (query === $('[name="city"]').value.trim()) {
+      searchStations().catch(error => showMapMessage(error.message, true));
+    }
+  }, 700);
+});
+$('.quick-filters').addEventListener('click', e => { const button = e.target.closest('[data-filter-city]'); if (!button) return; clearTimeout(placeSearchTimer); $('[name="city"]').value = button.dataset.filterCity; $('#searchForm').requestSubmit(); });
 $('#stationResults').addEventListener('click', e => {
   const button = e.target.closest('[data-public-map]');
   if (button) {
